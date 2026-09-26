@@ -28,7 +28,8 @@ jobs:
       - name: Verify tag matches package version
         run: |
           VERSION="$(node -p 'require("./package.json").version')"
-          test "$GITHUB_REF_NAME" = "v$VERSION"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then test "$GITHUB_REF_NAME" = "v$VERSION"; fi
+          echo "RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci
@@ -54,7 +55,7 @@ jobs:
 
       - name: Build release assets
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           node scripts/build-release-asset.mjs "$VERSION"
           cp install.sh install.ps1 scripts/install-release.mjs dist/
           cd dist
@@ -64,9 +65,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "$GITHUB_REF_NAME" \
+            --title "$RELEASE_TAG" \
             --generate-notes \
             dist/ompweb-*.tar.gz dist/SHA256SUMS dist/install.sh dist/install.ps1 dist/install-release.mjs
