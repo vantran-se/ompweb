@@ -442,7 +442,7 @@ export function UsageConfig() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
           gap: 14,
         }}
       >
@@ -515,6 +515,7 @@ export function UsageConfig() {
             ) : (
               providers.map((p) => (
                 <div
+                  className="usage-provider-row"
                   key={p.provider}
                   style={{
                     display: "flex",
@@ -523,7 +524,7 @@ export function UsageConfig() {
                     fontSize: 12,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="usage-provider-name" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div
                       style={{
                         width: 9,
@@ -533,10 +534,10 @@ export function UsageConfig() {
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontWeight: 500, color: "var(--text)" }}>{p.name}</span>
+                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, color: "var(--text)" }}>{p.name}</span>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="usage-provider-metrics" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>{formatCurrency(p.cost)}</span>
                     <span style={{ fontSize: 11, color: "var(--text-dim)", minWidth: 70, textAlign: "right" }}>
                       {p.share.toFixed(1)}% {t("usageConfig.share").toLowerCase()}
@@ -925,7 +926,7 @@ export function UsageConfig() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
           gap: 14,
         }}
       >
@@ -1012,7 +1013,7 @@ export function UsageConfig() {
           </div>
 
           {/* Table Container */}
-          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+          <div style={{ maxHeight: 220, overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-dim)", textAlign: "left" }}>

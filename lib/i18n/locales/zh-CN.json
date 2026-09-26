@@ -372,7 +372,7 @@
   "chatInput.groupPrompts": "提示词",
   "chatInput.groupSkills": "技能",
   "chatInput.dormant": "休眠",
-  "chatInput.imagesCannotQueue": "智能体运行时无法排队图片附件",
+  "chatInput.queuedImages": "{count} 个图片附件",
   "chatInput.indexTruncated": "索引已截断",
   "chatInput.inputHistory": "输入历史",
   "chatInput.kindFollowUp": "追加消息",

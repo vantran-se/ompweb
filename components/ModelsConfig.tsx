@@ -390,6 +390,7 @@ function ThinkingEditor({
 
         return (
           <div
+            className="thinking-editor-row"
             key={level}
             style={{
               display: "flex",
@@ -402,7 +403,7 @@ function ThinkingEditor({
             }}
           >
             {/* Level badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 5, width: 68, flexShrink: 0 }}>
+            <div className="thinking-editor-level" style={{ display: "flex", alignItems: "center", gap: 5, width: 68, flexShrink: 0 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0, opacity: state === "null" ? 0.3 : 1 }} />
               <span style={{
                 fontSize: 11,
@@ -415,7 +416,7 @@ function ThinkingEditor({
             </div>
 
             {/* Default + Disabled buttons */}
-            <div style={{ display: "flex", borderRadius: 5, border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
+            <div className="thinking-editor-defaults" style={{ display: "flex", borderRadius: 5, border: "1px solid var(--border)", overflow: "hidden", flexShrink: 0 }}>
               <button
                 onClick={() => setLevel(level, "omit")}
                 style={{ ...btnBase, ...(state === "omit" ? btnActive : {}) }}
@@ -431,7 +432,7 @@ function ThinkingEditor({
             </div>
 
             {/* Custom button + input fused */}
-            <div style={{ display: "flex", borderRadius: 5, border: `1px solid ${state === "string" ? "var(--accent)" : "var(--border)"}`, overflow: "hidden", transition: "border-color var(--dur-fast) var(--ease-out-warm)" }}>
+            <div className="thinking-editor-custom" style={{ display: "flex", borderRadius: 5, border: `1px solid ${state === "string" ? "var(--accent)" : "var(--border)"}`, overflow: "hidden", transition: "border-color var(--dur-fast) var(--ease-out-warm)" }}>
               <button
                 onClick={() => setLevel(level, strVal || level)}
                 style={{ ...btnBase, ...(state === "string" ? btnActive : {}), borderRight: "1px solid var(--border)", flexShrink: 0 }}
@@ -445,7 +446,8 @@ function ThinkingEditor({
                 placeholder={level}
                 maxLength={10}
                 style={{
-                  width: "12ch",
+                  width: "100%",
+                  minWidth: 0,
                   background: state === "string" ? "var(--bg)" : "var(--bg-panel)",
                   border: "none",
                   outline: "none",

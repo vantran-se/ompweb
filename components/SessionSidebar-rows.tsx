@@ -48,6 +48,7 @@ interface ProjectRowProps {
   unreadSessionIds: Set<string>;
   relativeTimeNow: number;
   onActivate: (path: string) => void;
+  onNewSession: (path: string) => void;
   onToggleExpand: (path: string) => void;
   onRemoveProject: (path: string) => void;
   onEditLaunchConfig: (project: ManagedProject) => void;
@@ -85,6 +86,7 @@ function ProjectRow({
   unreadSessionIds,
   relativeTimeNow,
   onActivate,
+  onNewSession,
   onToggleExpand,
   onRemoveProject,
   onEditLaunchConfig,
@@ -342,6 +344,16 @@ function ProjectRow({
             flexShrink: 0,
           }}
         >
+          <button
+            type="button"
+            className="sidebar-project-action"
+            onClick={() => onNewSession(project.path)}
+            aria-label={t("sessionSidebar.newSessionIn", { cwd: label })}
+            title={t("sessionSidebar.newSessionIn", { cwd: project.path })}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, padding: 0, border: "none", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text-dim)", cursor: "pointer", lineHeight: 0, transition: SIDEBAR_BUTTON_TRANSITION }}
+          >
+            <Plus size={13} strokeWidth={2} aria-hidden="true" />
+          </button>
           <button
             type="button"
             ref={actionButtonRef}

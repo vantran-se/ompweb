@@ -385,7 +385,7 @@
   "chatInput.groupPrompts": "Prompts",
   "chatInput.groupSkills": "Skills",
   "chatInput.dormant": "dormant",
-  "chatInput.imagesCannotQueue": "Image attachments cannot be queued while the agent is running",
+  "chatInput.queuedImages": "{count} image attachment(s)",
   "chatInput.indexTruncated": "index truncated",
   "chatInput.inputHistory": "Input history",
   "chatInput.kindFollowUp": "follow-up",

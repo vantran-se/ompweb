@@ -139,7 +139,7 @@ test("renders single queued prompt in compact bar", () => {
       onAbort() {},
       isStreaming: true,
       queuedMessages: {
-        followUp: ["First follow-up task"],
+        followUp: [{ id: "follow-up-1", text: "First follow-up task", attachments: [] }],
         steering: [],
       },
     }),
@@ -151,6 +151,23 @@ test("renders single queued prompt in compact bar", () => {
   assert.match(html, />(Steer|chatInput\.queuedSteerAction)</);
 });
 
+test("renders image metadata for a queued follow-up", () => {
+  const html = renderToStaticMarkup(
+    React.createElement(ChatInput, {
+      onSend() {},
+      onAbort() {},
+      isStreaming: true,
+      queuedMessages: {
+        followUp: [{ id: "image-follow-up", text: "Inspect this", attachments: [{ mimeType: "image/png" }] }],
+        steering: [],
+      },
+    }),
+  );
+
+  assert.match(html, /Inspect this/);
+  assert.match(html, /\+1 img/);
+});
+
 test("keeps editing and deletion but hides Steer for a single queued steer", () => {
   const html = renderToStaticMarkup(
     React.createElement(ChatInput, {
@@ -160,7 +177,7 @@ test("keeps editing and deletion but hides Steer for a single queued steer", () 
       isStreaming: true,
       queuedMessages: {
         followUp: [],
-        steering: ["Already prioritized task"],
+        steering: [{ id: "steer-1", text: "Already prioritized task", attachments: [] }],
       },
     }),
   );
@@ -178,8 +195,11 @@ test("renders multiple queued prompts with count and expand action", () => {
       onAbort() {},
       isStreaming: true,
       queuedMessages: {
-        followUp: ["First task", "Second task"],
-        steering: ["Priority steer"],
+        followUp: [
+          { id: "follow-up-1", text: "First task", attachments: [] },
+          { id: "follow-up-2", text: "Second task", attachments: [] },
+        ],
+        steering: [{ id: "steer-1", text: "Priority steer", attachments: [] }],
       },
     }),
   );
@@ -306,8 +326,8 @@ test("renders both queued prompts and attached status bar together", () => {
       isStreaming: true,
       statusText: "Waiting for model...",
       queuedMessages: {
-        steer: [],
-        followUp: ["Next prompt to run"],
+        steering: [],
+        followUp: [{ id: "follow-up-1", text: "Next prompt to run", attachments: [] }],
       },
     }),
   );

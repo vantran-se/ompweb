@@ -178,7 +178,8 @@ export function SettingsTabs({
             disabled={disabled}
             onClick={() => onSelect(id)}
             onKeyDown={(event) => onKeyDown(event, index)}
-            style={{ display: "inline-flex", alignItems: "flex-start", gap: 5, padding: "6px 9px", border: "none", borderRadius: "var(--radius-control)", background: selected ? "var(--bg-selected)" : "transparent", color: selected ? "var(--text)" : "var(--text-muted)", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, fontSize: 12, whiteSpace: "nowrap", textAlign: "left", minWidth: 150 }}
+            className="settings-nav-horizontal-item"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", border: "none", borderRadius: "var(--radius-control)", background: selected ? "var(--bg-selected)" : "transparent", color: selected ? "var(--text)" : "var(--text-muted)", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, fontSize: 12, whiteSpace: "nowrap", textAlign: "left" }}
           >
             <span style={{ position: "relative", display: "inline-flex", flexShrink: 0, marginTop: 1 }}>
               <Icon size={13} aria-hidden="true" />
@@ -198,9 +199,8 @@ export function SettingsTabs({
                 />
               )}
             </span>
-            <span style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
-              <span style={{ fontWeight: selected ? 600 : 500 }}>{displayLabel}</span>
-              <span style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", color: "var(--text-muted)", fontSize: 10, fontWeight: 400, lineHeight: 1.25 }}>{displayDescription}</span>
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", fontWeight: selected ? 600 : 500 }}>
+              {displayLabel}
             </span>
           </button>
         );

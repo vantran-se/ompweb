@@ -205,10 +205,10 @@ export function McpConfig({ cwd, sessionId }: { cwd: string | null; sessionId?: 
                   const active = server.status === "connected";
                   const muted = server.status === "not_connected" || server.status === "connecting";
                   return (
-                    <div key={`${sourceName}:${server.name}`} style={{ display: "flex", alignItems: "center", gap: 6, color: muted ? "var(--text-muted)" : server.status === "disabled" ? "var(--text-dim)" : "var(--text)", fontSize: 11 }}>
+                    <div className="mcp-status-row" key={`${sourceName}:${server.name}`} style={{ display: "flex", alignItems: "center", gap: 6, color: muted ? "var(--text-muted)" : server.status === "disabled" ? "var(--text-dim)" : "var(--text)", fontSize: 11 }}>
                       <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "var(--accent)" : "var(--border)" }} />
-                      <code style={{ color: active ? "var(--text)" : "inherit" }}>{server.name}</code>
-                      <span>{server.status === "connected" ? t("mcpConfig.statusConnected") : server.status === "connecting" ? t("mcpConfig.statusConnecting") : server.status === "disabled" ? t("mcpConfig.statusDisabled") : t("mcpConfig.statusNotConnected")}{server.type ? ` [${server.type}]` : ""}</span>
+                      <code style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: active ? "var(--text)" : "inherit" }}>{server.name}</code>
+                      <span style={{ flexShrink: 0 }}>{server.status === "connected" ? t("mcpConfig.statusConnected") : server.status === "connecting" ? t("mcpConfig.statusConnecting") : server.status === "disabled" ? t("mcpConfig.statusDisabled") : t("mcpConfig.statusNotConnected")}{server.type ? ` [${server.type}]` : ""}</span>
                     </div>
                   );
                 })}
@@ -225,17 +225,17 @@ export function McpConfig({ cwd, sessionId }: { cwd: string | null; sessionId?: 
             ) : (
               <div style={{ display: "grid", gap: 4 }}>
                 {(userConfig?.servers ?? []).map((server) => (
-                  <div key={server.name} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-muted)", fontSize: 11 }}>
+                  <div className="mcp-status-row" key={server.name} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-muted)", fontSize: 11 }}>
                     <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%", background: server.valid && server.enabled ? "var(--accent)" : "var(--border)" }} />
-                    <code style={{ color: "var(--text)" }}>{server.name}</code>
-                    <span>{server.enabled ? t("mcpConfig.enabled") : t("mcpConfig.disabled")} [{server.type}]</span>
+                    <code style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text)" }}>{server.name}</code>
+                    <span style={{ flexShrink: 0 }}>{server.enabled ? t("mcpConfig.enabled") : t("mcpConfig.disabled")} [{server.type}]</span>
                   </div>
                 ))}
                 {(userConfig?.disabledServers ?? []).map((name) => (
-                  <div key={name} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-dim)", fontSize: 11 }}>
+                  <div className="mcp-status-row" key={name} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-dim)", fontSize: 11 }}>
                     <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--border)" }} />
-                    <code>{name}</code>
-                    <span>{t("mcpConfig.disabled")}</span>
+                    <code style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</code>
+                    <span style={{ flexShrink: 0 }}>{t("mcpConfig.disabled")}</span>
                   </div>
                 ))}
                 {!loading && (userConfig?.servers.length ?? 0) === 0 && (userConfig?.disabledServers.length ?? 0) === 0 && <div style={{ color: "var(--text-dim)", fontSize: 11 }}>{t("mcpConfig.noOmpServers")}</div>}
@@ -246,7 +246,7 @@ export function McpConfig({ cwd, sessionId }: { cwd: string | null; sessionId?: 
       </div>
     </section>
     {cwd && <div style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: "var(--radius-card)", overflow: "visible", background: "var(--bg-panel)" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>
+    <div className="mcp-project-header" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>
       <strong style={{ fontSize: 12, color: "var(--text)", flexShrink: 0 }}>{t("mcpConfig.projectServers")}</strong>
       <code style={{ flex: 1, minWidth: 0, color: "var(--text-dim)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{path ?? "Loading..."}</code>
       {(() => {
@@ -254,7 +254,7 @@ export function McpConfig({ cwd, sessionId }: { cwd: string | null; sessionId?: 
         if (total === 0) return null;
         const enabled = servers.filter((s) => serverSummary(s.config).enabled && serverSummary(s.config).valid).length;
         const invalid = servers.filter((s) => !serverSummary(s.config).valid).length;
-        return <span style={{ marginLeft: 4, fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap" }}>{t("mcpConfig.serverCounts", { enabled, total })}{invalid > 0 ? t("mcpConfig.invalidSuffix", { count: invalid }) : ""}</span>;
+        return <span className="mcp-project-count" style={{ marginLeft: 4, fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap" }}>{t("mcpConfig.serverCounts", { enabled, total })}{invalid > 0 ? t("mcpConfig.invalidSuffix", { count: invalid }) : ""}</span>;
       })()}
     </div>
     <div className="mcp-editor-grid" style={{ display: "grid", gridTemplateColumns: "minmax(120px, 0.35fr) minmax(0, 1fr)", minHeight: 250 }}>

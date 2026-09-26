@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Monitor, Moon, Sparkles, Sun } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
@@ -42,6 +43,8 @@ export function ThemeSwitcher() {
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const baseId = useId();
   const menuId = `${baseId}-menu`;
 
@@ -55,6 +58,53 @@ export function ThemeSwitcher() {
   useEffect(() => {
     if (open) itemRefs.current[activeIndex]?.focus();
   }, [open, activeIndex]);
+
+  const positionMenu = useCallback(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return;
+    const rect = trigger.getBoundingClientRect();
+    let scale = 1;
+    const rawScale = getComputedStyle(document.documentElement).getPropertyValue("--ui-scale");
+    const parsedScale = Number.parseFloat(rawScale);
+    if (Number.isFinite(parsedScale) && parsedScale > 0) scale = parsedScale;
+    const viewportWidth = window.innerWidth / scale;
+    const viewportHeight = window.innerHeight / scale;
+    const triggerLeft = rect.left / scale;
+    const triggerBottom = rect.bottom / scale;
+    const width = menu.offsetWidth;
+    const top = Math.min(triggerBottom + 4, viewportHeight - 8);
+    const left = Math.max(8, Math.min(triggerLeft, viewportWidth - width - 8));
+    setMenuPosition({ top, left, maxHeight: Math.max(120, viewportHeight - top - 8) });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+    positionMenu();
+  }, [open, positionMenu]);
+
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => positionMenu();
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [open, positionMenu]);
 
   // Close on outside click / Escape is handled in onKeyDown below; also close
   // when the trigger loses focus to something outside the component.
@@ -123,9 +173,19 @@ export function ThemeSwitcher() {
         e.stopPropagation();
         close(true);
         break;
-      case "Tab":
+      case "Tab": {
+        e.preventDefault();
+        const trigger = triggerRef.current;
         close(false);
+        if (!trigger) break;
+        const focusable = Array.from(document.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        )).filter((element) => element.getClientRects().length > 0 && !menuRef.current?.contains(element));
+        const triggerIndex = focusable.indexOf(trigger);
+        const nextIndex = e.shiftKey ? triggerIndex - 1 : triggerIndex + 1;
+        focusable[Math.max(0, Math.min(focusable.length - 1, nextIndex))]?.focus();
         break;
+      }
     }
   };
 
@@ -134,7 +194,7 @@ export function ThemeSwitcher() {
       style={{ position: "relative", flexShrink: 0 }}
       onBlur={(e) => {
         // Close when focus leaves the whole switcher.
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+        if (!e.currentTarget.contains(e.relatedTarget as Node) && !menuRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
       }}
     >
       <button
@@ -173,18 +233,22 @@ export function ThemeSwitcher() {
         />
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
+          ref={menuRef}
           id={menuId}
           role="menu"
           className="dropdown-surface animate-slide-down"
           style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            zIndex: 50,
-            minWidth: isMobile ? 220 : 350,
-            maxWidth: "92vw",
+            position: "fixed",
+            top: menuPosition?.top ?? -9999,
+            left: menuPosition?.left ?? -9999,
+            visibility: menuPosition ? "visible" : "hidden",
+            zIndex: 1000,
+            width: isMobile ? 220 : 350,
+            maxWidth: "calc(100vw - 16px)",
+            maxHeight: menuPosition?.maxHeight,
+            overflowY: "auto",
             margin: 0,
             padding: 6,
             background: "var(--bg-panel)",
@@ -199,8 +263,8 @@ export function ThemeSwitcher() {
               flexDirection: isMobile ? "column" : undefined,
               gridTemplateColumns: isMobile ? undefined : "1fr 1fr",
               gap: isMobile ? 4 : 8,
-              maxHeight: isMobile ? 380 : undefined,
-              overflowY: isMobile ? "auto" : undefined,
+              maxHeight: undefined,
+              overflowY: undefined,
             }}
           >
             {/* Light column */}
@@ -223,7 +287,7 @@ export function ThemeSwitcher() {
                 return (
                   <button
                     key={theme.id}
-                    className="dropdown-item"
+                    className="dropdown-item theme-option"
                     ref={(el) => { itemRefs.current[globalIdx] = el; }}
                     type="button"
                     role="menuitemradio"
@@ -290,7 +354,7 @@ export function ThemeSwitcher() {
                 return (
                   <button
                     key="system"
-                    className="dropdown-item"
+                    className="dropdown-item theme-option"
                     ref={(el) => { itemRefs.current[systemIdx] = el; }}
                     type="button"
                     role="menuitemradio"
@@ -346,7 +410,7 @@ export function ThemeSwitcher() {
                 return (
                   <button
                     key={theme.id}
-                    className="dropdown-item"
+                    className="dropdown-item theme-option"
                     ref={(el) => { itemRefs.current[globalIdx] = el; }}
                     type="button"
                     role="menuitemradio"
@@ -396,7 +460,8 @@ export function ThemeSwitcher() {
               })}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

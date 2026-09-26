@@ -187,6 +187,7 @@ test("expanded tool calls show the compact command header", () => {
   assert.match(html, /\$<\/span><code>read foo\.ts<\/code>/);
 });
 
+
 test("ask tool previews question prompts instead of object coercion", () => {
   const html = renderToStaticMarkup(React.createElement(MessageView, {
     isStreaming: true,

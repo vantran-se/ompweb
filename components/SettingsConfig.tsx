@@ -60,6 +60,9 @@ type NativeSettings = {
 };
 
 const nativeSelectStyle = {
+  width: "100%",
+  minWidth: 0,
+  maxWidth: "100%",
   minHeight: "var(--control-height)",
   padding: "4px 28px 4px var(--control-padding-inline)",
   border: "1px solid var(--border)",
@@ -264,7 +267,7 @@ function ToggleSwitch({
       aria-describedby={ariaDescribedBy}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="ui-focus-ring"
+      className="settings-toggle-switch ui-focus-ring"
       style={{
         position: "relative",
         display: "inline-flex",
@@ -272,7 +275,7 @@ function ToggleSwitch({
         justifyContent: "center",
         width: 44,
         height: 44,
-        padding: 10,
+        padding: 2,
         border: "none",
         background: "transparent",
         cursor: disabled ? "not-allowed" : "pointer",
@@ -286,6 +289,9 @@ function ToggleSwitch({
           alignItems: "center",
           width: 40,
           height: 24,
+          boxSizing: "border-box",
+          flexShrink: 0,
+          overflow: "hidden",
           padding: 2,
           borderRadius: 12,
           background: checked ? "var(--accent-strong)" : "var(--border)",
@@ -296,6 +302,7 @@ function ToggleSwitch({
           style={{
             width: 20,
             height: 20,
+            flexShrink: 0,
             borderRadius: 10,
             background: "#fff",
             transform: checked ? "translateX(16px)" : "translateX(0px)",
@@ -357,7 +364,7 @@ function NativeSetting({ label, description, scope, searchId, children }: { labe
       }}
     >
       <div className="settings-card-text">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <div className="settings-card-heading" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <label id={labelId} htmlFor={settingId} className="settings-card-title" style={{ cursor: "pointer" }}>{label}</label>
           {scope && (
             <span style={chipStyle}>
@@ -367,7 +374,7 @@ function NativeSetting({ label, description, scope, searchId, children }: { labe
         </div>
         <span id={descId} className="settings-card-desc">{description}</span>
       </div>
-      <span style={{ flexShrink: 0 }}>{enhancedChild}</span>
+      <span className="settings-card-control">{enhancedChild}</span>
     </div>
   );
 }
@@ -718,7 +725,7 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
   return (
     <div className="settings-view" role="region" aria-label={t("settingsConfig.title")}>
       <header className="settings-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
           <button
             type="button"
             className="settings-back"
@@ -769,14 +776,15 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                   (e.target as HTMLInputElement).blur();
                 }
               }}
-              style={{ width: "100%", height: "var(--row-height-compact)", padding: "0 28px 0 30px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg)", color: "var(--text)", fontSize: "var(--text-sm)", outline: "none" }}
+              style={{ width: "100%", height: "var(--row-height-compact)", padding: "0 44px 0 30px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg)", color: "var(--text)", fontSize: "var(--text-sm)", outline: "none" }}
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => { setSearchQuery(""); setHighlightId(null); }}
-                style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 2, display: "flex", alignItems: "center", justifyContent: "center" }}
-                aria-label="Clear search"
+                className="settings-search-clear ui-focus-ring"
+                style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                aria-label={t("fileExplorer.clearSearch")}
               >
                 <X size={12} aria-hidden="true" />
               </button>
@@ -1284,7 +1292,7 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                 {/* ompweb app update card */}
                 <section style={{ padding: 14, border: appUpdateIsAvailable ? "1px solid color-mix(in srgb, var(--accent) 45%, var(--border))" : "1px solid var(--border)", borderRadius: "var(--radius-card)", background: "var(--bg-panel)", display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 600 }}>{t("settingsConfig.appLabel")}</span>
                         {appUpdateIsAvailable && (
@@ -1296,11 +1304,11 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                           />
                         )}
                       </div>
-                      <div style={{ marginTop: 4, color: appUpdateIsAvailable ? "var(--accent)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                      <div style={{ minWidth: 0, marginTop: 4, color: appUpdateIsAvailable ? "var(--accent)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12, overflowWrap: "anywhere" }}>
                         {appUpdatesDisabled ? t("settingsConfig.updatesDisabled") : checkingAppUpdate ? t("settingsConfig.checkingUpdates") : appUpdate?.updateAvailable ? t("appShell.updateVersion", { current: appUpdate.currentVersion ?? "?", available: appUpdate.availableVersion ?? "?" }) : appUpdate?.currentVersion ? t("settingsConfig.upToDate", { version: appUpdate.currentVersion }) : t("settingsConfig.versionUnavailable")}
                       </div>
                     </div>
-                    <button type="button" onClick={() => void checkForAppUpdate(true)} disabled={checkingAppUpdate || appUpdatesDisabled} aria-label={t("settingsConfig.checkAppUpdates")} style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: checkingAppUpdate || appUpdatesDisabled ? "not-allowed" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <button type="button" onClick={() => void checkForAppUpdate(true)} disabled={checkingAppUpdate || appUpdatesDisabled} aria-label={t("settingsConfig.checkAppUpdates")} style={{ flexShrink: 0, padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: checkingAppUpdate || appUpdatesDisabled ? "not-allowed" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <RefreshCw size={13} aria-hidden="true" /> {t("settingsConfig.refresh")}
                     </button>
                   </div>
@@ -1320,8 +1328,8 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                             {t("settingsConfig.runAppUpdateCommand")}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <code style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{appUpdate.updateCommand || "npm install -g @kahme247/ompweb"}</code>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <code style={{ minWidth: 0, flex: "1 1 12rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{appUpdate.updateCommand || "npm install -g @kahme247/ompweb"}</code>
                             <button
                               type="button"
                               onClick={() => {
@@ -1344,7 +1352,7 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                 {/* OMP runtime update card */}
                 <section style={{ padding: 14, border: ompUpdateIsAvailable ? "1px solid color-mix(in srgb, var(--accent) 45%, var(--border))" : "1px solid var(--border)", borderRadius: "var(--radius-card)", background: "var(--bg-panel)", display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 600 }}>{t("settingsConfig.ompLabel")}</span>
                         {ompUpdateIsAvailable && (
@@ -1356,11 +1364,11 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                           />
                         )}
                       </div>
-                      <div style={{ marginTop: 4, color: ompUpdateIsAvailable ? "var(--accent)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                      <div style={{ minWidth: 0, marginTop: 4, color: ompUpdateIsAvailable ? "var(--accent)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12, overflowWrap: "anywhere" }}>
                         {ompUpdateDisabled ? t("settingsConfig.updatesDisabled") : checking || (!hasCheckedUpdates && !update) ? t("settingsConfig.checkingUpdates") : update?.updateAvailable ? t("appShell.updateVersion", { current: update.currentVersion ?? "?", available: update.availableVersion ?? "?" }) : update?.currentVersion ? t("settingsConfig.upToDate", { version: update.currentVersion }) : t("settingsConfig.versionUnavailable")}
                       </div>
                     </div>
-                    <button type="button" onClick={() => void checkForUpdate(true)} disabled={checking || ompUpdateDisabled} aria-label={t("settingsConfig.checkOmpUpdates")} style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: checking || ompUpdateDisabled ? "not-allowed" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <button type="button" onClick={() => void checkForUpdate(true)} disabled={checking || ompUpdateDisabled} aria-label={t("settingsConfig.checkOmpUpdates")} style={{ flexShrink: 0, padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: checking || ompUpdateDisabled ? "not-allowed" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <RefreshCw size={13} aria-hidden="true" /> {t("settingsConfig.refresh")}
                     </button>
                   </div>
@@ -1368,7 +1376,7 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                     <div style={{ marginTop: 6, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg)", display: "flex", flexDirection: "column", gap: 6 }}>
                       <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("settingsConfig.runOmpUpdateCommand")}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <code style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{update.updateCommand || "omp update"}</code>
+                        <code style={{ minWidth: 0, flex: "1 1 12rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{update.updateCommand || "omp update"}</code>
                         <button
                           type="button"
                           onClick={() => void handleOmpUpdateNow()}
@@ -1416,12 +1424,12 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                 {windowsService?.isWindows && (
                   <section style={{ padding: 14, border: "1px solid var(--border)", borderRadius: "var(--radius-card)", background: "var(--bg-panel)", display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
                           <Monitor size={15} aria-hidden="true" />
                           {t("settingsConfig.windowsServiceTitle")}
                         </div>
-                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
+                        <p style={{ minWidth: 0, margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4, overflowWrap: "anywhere" }}>
                           {t("settingsConfig.windowsServiceDesc")}
                         </p>
                       </div>
@@ -1430,7 +1438,7 @@ export function SettingsConfig({ activeTab, toolCallsDefaultCollapsed, onToolCal
                         onClick={() => void fetchWindowsServiceStatus()}
                         disabled={loadingWindowsService}
                         aria-label={t("settingsConfig.refresh")}
-                        style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: loadingWindowsService ? "wait" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}
+                        style={{ flexShrink: 0, padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "transparent", color: "var(--text)", cursor: loadingWindowsService ? "wait" : "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}
                       >
                         <RefreshCw size={13} aria-hidden="true" /> {t("settingsConfig.refresh")}
                       </button>

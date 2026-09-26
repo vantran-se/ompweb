@@ -50,9 +50,13 @@ export type { SubagentInfo } from "@/lib/subagent-types";
 import {
   EMPTY_QUEUE,
   clearPersistedQueue,
+  consumeQueuedMessage as consumeQueuedMessageEntry,
+  createQueuedMessageEntry,
   isEmptyQueue,
   persistQueue,
+  promoteQueuedMessage,
   readPersistedQueue,
+  removeQueuedMessage as removeQueuedMessageEntry,
 } from "./useAgentSession-queue";
 import type { QueuedMessages } from "./useAgentSession-queue";
 import {
@@ -126,7 +130,7 @@ export type {
   SlashCommandInfo,
   ThinkingLevelOption,
 } from "./useAgentSession-stream";
-export type { QueuedMessages } from "./useAgentSession-queue";
+export type { QueuedMessageAttachment, QueuedMessageEntry, QueuedMessages } from "./useAgentSession-queue";
 export type { NoticeItem, NoticeType } from "./useAgentSession-notices";
 
 /** Read the error carried by OMP's assistant/error frames without rendering
@@ -981,15 +985,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // below can restore everything the mount flow sets up — not just the stream.
   const reconnectActionsRef = useRef<((sid: string) => void) | null>(null);
 
-  const consumeQueuedMessage = useCallback((text: string) => {
+  const consumeQueuedMessage = useCallback((message: AgentMessage) => {
+    const text = extractMessageText(message);
     if (!text) return;
-    setQueuedMessages((prev) => {
-      const si = prev.steering.indexOf(text);
-      if (si !== -1) return { ...prev, steering: prev.steering.filter((_, i) => i !== si) };
-      const fi = prev.followUp.indexOf(text);
-      if (fi !== -1) return { ...prev, followUp: prev.followUp.filter((_, i) => i !== fi) };
-      return prev;
-    });
+    const content = "content" in message ? message.content : null;
+    const attachmentMimeTypes = Array.isArray(content)
+      ? content.flatMap((block) => block.type === "image"
+        ? [block.mimeType ?? block.source?.media_type].filter((mimeType): mimeType is string => typeof mimeType === "string")
+        : [])
+      : [];
+    setQueuedMessages((prev) => consumeQueuedMessageEntry(prev, text, attachmentMimeTypes));
   }, []);
 
   const connectEvents = useCallback((sid: string, restoreWrapper = false): Promise<EventStreamConnectionResult> => {
@@ -1043,7 +1048,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           const order = catchUp.observe(event);
           if (order === "stale") {
             if (event.type === "message_end" && (event.message as AgentMessage | undefined)?.role === "user") {
-              consumeQueuedMessage(extractMessageText(event.message as AgentMessage));
+              consumeQueuedMessage(event.message as AgentMessage);
             }
             return;
           }
@@ -1732,32 +1737,17 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   /** Remove one queued message from the client-side queue mirror. omp's RPC
    *  protocol has no queue-mutation commands, so this only affects the queue
    *  panel: a message removed here may still be delivered by the running agent
-   *  (it then arrives in the chat like any delivered turn). */
-  const removeQueuedMessage = useCallback((text: string) => {
-    if (!text) return;
-    setQueuedMessages((prev) => {
-      const si = prev.steering.indexOf(text);
-      const fi = prev.followUp.indexOf(text);
-      if (si === -1 && fi === -1) return prev;
-      return {
-        steering: si === -1 ? prev.steering : prev.steering.filter((_, i) => i !== si),
-        followUp: fi === -1 ? prev.followUp : prev.followUp.filter((_, i) => i !== fi),
-      };
-    });
+   *  (it then arrives in the chat like any delivered turn). IDs disambiguate
+   *  duplicate text; text remains accepted for callers using the old contract. */
+  const removeQueuedMessage = useCallback((idOrText: string) => {
+    if (!idOrText) return;
+    setQueuedMessages((prev) => removeQueuedMessageEntry(prev, idOrText));
   }, []);
 
-  /** Promote the first queued follow-up to a steering message (client-side
-   *  relabel; the delivery order itself is owned by omp). */
-  const promoteQueuedToSteer = useCallback((text: string) => {
-    if (!text) return;
-    setQueuedMessages((prev) => {
-      const fi = prev.followUp.indexOf(text);
-      if (fi === -1) return prev;
-      return {
-        steering: [...prev.steering, text],
-        followUp: prev.followUp.filter((_, i) => i !== fi),
-      };
-    });
+  /** Promote one queued follow-up to steering in the client-side mirror. */
+  const promoteQueuedToSteer = useCallback((idOrText: string) => {
+    if (!idOrText) return;
+    setQueuedMessages((prev) => promoteQueuedMessage(prev, idOrText));
   }, []);
 
   // Mirror queued texts into sessionStorage so a reload can restore them.
@@ -2049,7 +2039,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         }
         if (completed && completed.role === "user") {
           // Queue delivery is a live side effect; persisted IDs alone commit history.
-          consumeQueuedMessage(extractMessageText(completed));
+          consumeQueuedMessage(completed);
         } else if (completed?.role === "custom" && (completed as CustomMessage).customType === "xdev-mount-notice") {
           toast.info("MCP tools updated", describeMcpMountNotice(completed as CustomMessage), { clamp: true });
         } else if (completed) {
@@ -3093,10 +3083,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         message,
         ...(piImages?.length ? { images: piImages } : {}),
       });
-      // omp emits no queue snapshots; track the queued text locally until it
-      // is delivered (user message_end) or the queue count drops to zero.
+      // omp emits no queue snapshots; track compact text/image metadata locally
+      // until delivery (user message_end) or the queue count drops to zero.
       queueMutatedAtRef.current = Date.now();
-      setQueuedMessages((prev) => ({ ...prev, steering: [...prev.steering, message] }));
+      const entry = createQueuedMessageEntry(message, images);
+      setQueuedMessages((prev) => ({ ...prev, steering: [...prev.steering, entry] }));
     } catch (e) {
       console.error("Failed to steer:", e);
       addNotice({ type: "error", message: e instanceof Error ? e.message : String(e) });
@@ -3120,9 +3111,10 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         ...(piImages?.length ? { images: piImages } : {}),
       });
       queueMutatedAtRef.current = Date.now();
+      const entry = createQueuedMessageEntry(message, images);
       setQueuedMessages((prev) => behavior === "steer"
-        ? { ...prev, steering: [...prev.steering, message] }
-        : { ...prev, followUp: [...prev.followUp, message] });
+        ? { ...prev, steering: [...prev.steering, entry] }
+        : { ...prev, followUp: [...prev.followUp, entry] });
     } catch (e) {
       console.error("Failed to queue prompt:", e);
       addNotice({ type: "error", message: e instanceof Error ? e.message : String(e) });
@@ -3141,7 +3133,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         ...(piImages?.length ? { images: piImages } : {}),
       });
       queueMutatedAtRef.current = Date.now();
-      setQueuedMessages((prev) => ({ ...prev, followUp: [...prev.followUp, message] }));
+      const entry = createQueuedMessageEntry(message, images);
+      setQueuedMessages((prev) => ({ ...prev, followUp: [...prev.followUp, entry] }));
     } catch (e) {
       console.error("Failed to follow up:", e);
       addNotice({ type: "error", message: e instanceof Error ? e.message : String(e) });

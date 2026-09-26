@@ -1056,31 +1056,25 @@ export function AppShell() {
       return;
     }
     // Worktrees of one repo share a project root. Moving the effective cwd
-    // within the same project (e.g. switching worktree, or clicking a session
-    // that lives in another worktree) must not close the open session.
-    // Compare case-folded: the same folder can be spelled with different
-    // casing (Windows/NTFS) between the session's projectRoot and the
-    // sidebar's resolved project root.
+    // within the same project must not close the open session.
     const newProject = projectRoot ?? cwd;
     const sessionProject = selectedSession ? (selectedSession.projectRoot ?? selectedSession.cwd) : null;
     if (sessionProject && comparableProjectPath(sessionProject) === comparableProjectPath(newProject)) {
       return;
     }
-    // Close any session that belongs to a different project — it no longer
-    // matches the selected project directory.
+    // New-session selection already owns this cwd. Its sidebar notification
+    // must not remount ChatWindow a second time or clear the chosen workspace.
+    if (!selectedSession && newSessionCwd === cwd) return;
     setSelectedSession(null);
-    setNewSessionCwd((prev) => {
-      if (prev && prev !== cwd) return null;
-      return prev;
-    });
-    setSessionKey((k) => k + 1);
+    setNewSessionCwd((prev) => prev && prev !== cwd ? null : prev);
+    setSessionKey((key) => key + 1);
     setBranchTree([]);
     setBranchActiveLeafId(null);
     setSystemPrompt(null);
     setSystemPromptLoading(false);
     setActiveTopPanel(null);
-    router.replace("/", { scroll: false });
-  }, [router, selectedSession]);
+    if (window.location.search) window.history.replaceState(window.history.state, "", "/");
+  }, [selectedSession, newSessionCwd]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false) => {
     // Re-picking the already-open session (sidebar double-click, palette
@@ -1117,9 +1111,10 @@ export function AppShell() {
 
   const handleNewSession = useCallback((_sessionId: string, cwd: string) => {
     setSettingsTab(null);
+    const alreadyOpen = selectedSession === null && newSessionCwd === cwd;
     setSelectedSession(null);
     setNewSessionCwd(cwd);
-    setSessionKey((k) => k + 1);
+    if (!alreadyOpen) setSessionKey((key) => key + 1);
     setBranchTree([]);
     setBranchActiveLeafId(null);
     setSystemPrompt(null);
@@ -1129,8 +1124,8 @@ export function AppShell() {
       setSidebarOpen(false);
       requestAnimationFrame(() => chatInputRef.current?.focus());
     }
-    router.replace("/", { scroll: false });
-  }, [router, isMobile]);
+    if (window.location.search) window.history.replaceState(window.history.state, "", "/");
+  }, [isMobile, selectedSession, newSessionCwd]);
 
 
   // Global keyboard shortcuts (handles Esc, Ctrl+Alt+N etc.)
@@ -1646,7 +1641,7 @@ export function AppShell() {
           background: "color-mix(in srgb, var(--text) 28%, transparent)",
           opacity: sidebarOpen ? 1 : 0,
           pointerEvents: sidebarOpen ? "auto" : "none",
-          transition: "opacity var(--dur-slow) var(--ease-out-warm)",
+          transition: "opacity var(--dur-fast) var(--ease-out-warm)",
         }}
       />
 

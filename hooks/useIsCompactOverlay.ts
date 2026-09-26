@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 // The right panel becomes an overlay at the same widths as its CSS treatment.
-const COMPACT_OVERLAY_QUERY = "(max-width: 960px)";
+const COMPACT_OVERLAY_QUERY = "(max-width: 1100px)";
 
 function subscribe(cb: () => void): () => void {
   if (typeof window === "undefined" || !window.matchMedia) return () => {};

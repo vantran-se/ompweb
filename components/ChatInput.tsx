@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useCallback, useEffect, useLayoutEffect, useImperativeHandle, forwardRef, memo, KeyboardEvent } from "react";
-import { ChevronDown, ListChecks, Loader2, Mic, Paperclip, Plus, Shrink, Sparkles, Wrench, X, Zap } from "lucide-react";
+import { Check, ChevronDown, ListChecks, Loader2, Mic, Paperclip, Plus, Shrink, Sparkles, Wrench, X, Zap } from "lucide-react";
 import { getSubmitDuringRunBehavior } from "@/lib/composer-prefs";
 import type { BuiltinSlashCommandResult, CompactResultInfo, QueuedMessages, SlashCommandInfo } from "@/hooks/useAgentSession";
 import type { ActiveGoal, ActivePlan } from "@/lib/web-mode-state";
@@ -294,6 +294,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   );
   const [value, setValue] = useState(() => (draftKey ? getDraft(draftKey)?.value ?? "" : ""));
   const [queuedDeleteTarget, setQueuedDeleteTarget] = useState<{
+    id: string;
     text: string;
     draftKey: string | undefined;
     queue: Props["queuedMessages"];
@@ -302,7 +303,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
-  const [plusExpanded, setPlusExpanded] = useState<"tools" | "advisor" | null>(null);
+  const [plusExpanded, setPlusExpanded] = useState<"tools" | "advisor" | "reasoning" | null>(null);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>(() => (
     draftKey ? draftImagesToAttachedImages(getDraft(draftKey)?.images) : []
@@ -548,15 +549,15 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   }, []);
 
   const processFiles = useCallback((files: File[]) => {
-    if (isStreaming) {
-      setAttachError(t("chatInput.attachmentsDisabled"));
-      return;
-    }
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     const otherFiles = files.filter((file) => !file.type.startsWith("image/"));
     void processImageFiles(imageFiles);
+    if (isStreaming && otherFiles.length > 0) {
+      setAttachError(t("chatInput.attachmentsDisabled"));
+      return;
+    }
     void processTextFiles(otherFiles);
-  }, [isStreaming, processImageFiles, processTextFiles]);
+  }, [isStreaming, processImageFiles, processTextFiles, t]);
 
   const removeImage = useCallback((index: number) => {
     setAttachedImages((prev) => {
@@ -1094,7 +1095,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
     const raw = overrideText ?? value;
     const msg = raw.trim();
     if (!msg && !attachedImagesRef.current.length && !attachedTextFilesRef.current.length) return;
-    if (attachedImagesRef.current.length || attachedTextFilesRef.current.length) return;
+    if (attachedTextFilesRef.current.length) return;
     onAudioUnlock?.();
     const streamingBehavior = mode === "steer" ? "steer" : "followUp";
     if (msg.startsWith("/") && onPromptWithStreamingBehavior) {
@@ -1136,15 +1137,13 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
     }
     clearInput();
   }, [value, onPromptWithStreamingBehavior, onSteer, onFollowUp, clearInput, onAudioUnlock, t, advisorEnabled, rejectsOversizedPrompt]);
-  // A typed, text-only message during a run is a queued follow-up — and so is
-  // a dictation in progress: the primary button must take the same state it
-  // would have if the composer already held text. Keep Stop as the action
-  // while the composer is empty and nothing is being recorded.
+  // A typed message, image attachment, or dictation during a run is a queued
+  // follow-up. Text-file attachments still require a fresh prompt because
+  // queued RPC messages only carry image content.
   const dictationCapturing = isRecording || isPaused;
   const primaryActionQueuesMessage =
     isStreaming
-    && (Boolean(value.trim()) || dictationCapturing)
-    && attachedImages.length === 0
+    && (Boolean(value.trim()) || dictationCapturing || attachedImages.length > 0)
     && attachedTextFiles.length === 0
     && Boolean(onFollowUp);
 
@@ -1153,8 +1152,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   // client-side mirror, so Edit/Delete/Steer act on that mirror through the
   // session hook's helpers.
   const queuedEntries = [
-    ...(queuedMessages?.followUp ?? []).map((text) => ({ kind: "follow-up" as const, text })),
-    ...(queuedMessages?.steering ?? []).map((text) => ({ kind: "steer" as const, text })),
+    ...(queuedMessages?.followUp ?? []).map((entry) => ({ kind: "follow-up" as const, ...entry })),
+    ...(queuedMessages?.steering ?? []).map((entry) => ({ kind: "steer" as const, ...entry })),
   ];
   const firstQueued = queuedEntries[0] ?? null;
   const queuedCount = queuedEntries.length;
@@ -1164,39 +1163,39 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   const activeDeleteTarget = queuedDeleteTarget?.draftKey === draftKey
     && queuedDeleteTarget?.queue === queuedMessages ? queuedDeleteTarget : null;
 
-  const handleItemEdit = useCallback((text: string) => {
-    onRemoveQueuedMessage?.(text);
-    setValue(text);
+  const handleItemEdit = useCallback((entry: { id: string; text: string }) => {
+    onRemoveQueuedMessage?.(entry.id);
+    setValue(entry.text);
     setAtQuery(null);
     setHistoryMenuOpen(false);
     requestAnimationFrame(() => {
       const ta = textareaRef.current;
       if (!ta) return;
       ta.focus();
-      ta.setSelectionRange(text.length, text.length);
+      ta.setSelectionRange(entry.text.length, entry.text.length);
       ta.style.height = "auto";
       ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
     });
   }, [onRemoveQueuedMessage]);
 
-  const handleItemDelete = useCallback((text: string) => {
-    setQueuedDeleteTarget({ text, draftKey, queue: queuedMessages });
+  const handleItemDelete = useCallback((entry: { id: string; text: string }) => {
+    setQueuedDeleteTarget({ id: entry.id, text: entry.text, draftKey, queue: queuedMessages });
   }, [draftKey, queuedMessages]);
 
-  const handleItemSteer = useCallback((entry: { kind: "follow-up" | "steer"; text: string }) => {
+  const handleItemSteer = useCallback((entry: { id: string; kind: "follow-up" | "steer" }) => {
     if (entry.kind === "follow-up") {
-      onPromoteQueuedToSteer?.(entry.text);
+      onPromoteQueuedToSteer?.(entry.id);
     }
   }, [onPromoteQueuedToSteer]);
 
   const handleQueuedEdit = useCallback(() => {
     if (!firstQueued) return;
-    handleItemEdit(firstQueued.text);
+    handleItemEdit(firstQueued);
   }, [firstQueued, handleItemEdit]);
 
   const handleQueuedDelete = useCallback(() => {
     if (!firstQueued) return;
-    handleItemDelete(firstQueued.text);
+    handleItemDelete(firstQueued);
   }, [firstQueued, handleItemDelete]);
 
   const handleQueuedSteer = useCallback(() => {
@@ -1606,7 +1605,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
         onConfirm={() => {
           if (!activeDeleteTarget) return;
           setQueuedDeleteTarget(null);
-          onRemoveQueuedMessage?.(activeDeleteTarget.text);
+          onRemoveQueuedMessage?.(activeDeleteTarget.id);
         }}
       />
       {/* Hidden file input */}
@@ -1618,7 +1617,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
         // only hide files the app can attach (code, config, logs, ...).
         accept="*/*"
         multiple
-        disabled={isStreaming}
+        disabled={false}
         style={{ display: "none" }}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -2190,8 +2189,13 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                     color: "var(--text-muted)",
                   }}
                 >
-                  {firstQueued?.text}
+                  {firstQueued?.text || t("chatInput.attachFile")}
                 </span>
+                {(firstQueued?.attachments.length ?? 0) > 0 && (
+                  <span title={t("chatInput.queuedImages", { count: firstQueued?.attachments.length ?? 0 })} style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-mono)" }}>
+                    +{firstQueued?.attachments.length} img
+                  </span>
+                )}
                 <QueuedActionButton onClick={handleQueuedEdit} title={t("chatInput.queuedEditTitle")}>
                   {t("chatInput.queuedEdit")}
                 </QueuedActionButton>
@@ -2262,7 +2266,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                           textTransform: "none",
                         }}
                       >
-                        {firstQueued.kind === "steer" ? `[${t("chatInput.queuedSteer")}] ` : ""}{firstQueued.text}
+                        {firstQueued.kind === "steer" ? `[${t("chatInput.queuedSteer")}] ` : ""}{firstQueued.text || t("chatInput.attachFile")}{firstQueued.attachments.length > 0 ? ` · ${t("chatInput.queuedImages", { count: firstQueued.attachments.length })}` : ""}
                       </span>
                     )}
                   </button>
@@ -2293,9 +2297,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                     background: "var(--bg-subtle)",
                     padding: "4px 0",
                   }}>
-                    {queuedEntries.map((entry, idx) => (
+                    {queuedEntries.map((entry) => (
                       <div
-                        key={`${entry.kind}:${idx}:${entry.text}`}
+                        key={entry.id}
                         style={{
                           padding: "4px 8px 4px 12px",
                           display: "flex",
@@ -2332,12 +2336,17 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                             fontSize: 11.5,
                           }}
                         >
-                          {entry.text}
+                          {entry.text || t("chatInput.attachFile")}
                         </span>
-                        <QueuedActionButton onClick={() => handleItemEdit(entry.text)} title={t("chatInput.queuedEditTitle")}>
+                        {entry.attachments.length > 0 && (
+                          <span title={t("chatInput.queuedImages", { count: entry.attachments.length })} style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-mono)" }}>
+                            +{entry.attachments.length} img
+                          </span>
+                        )}
+                        <QueuedActionButton onClick={() => handleItemEdit(entry)} title={t("chatInput.queuedEditTitle")}>
                           {t("chatInput.queuedEdit")}
                         </QueuedActionButton>
-                        <QueuedActionButton onClick={() => handleItemDelete(entry.text)} title={t("chatInput.queuedDeleteTitle")}>
+                        <QueuedActionButton onClick={() => handleItemDelete(entry)} title={t("chatInput.queuedDeleteTitle")}>
                           {t("chatInput.queuedDelete")}
                         </QueuedActionButton>
                         {entry.kind === "follow-up" && (
@@ -2375,7 +2384,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               aria-hidden
               className="live-status-dot live-pulse inline-block h-2 w-2 shrink-0 rounded-full bg-accent"
             />
-            <span>{statusText}</span>
+            <span style={{ minWidth: 0, flex: 1, overflowWrap: "anywhere" }}>{statusText}</span>
           </div>
         )}
           <div
@@ -2521,25 +2530,105 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                     <span className="picker-panel-title">{t("chatInput.plusMenu")}</span>
                   </div>
                   <button
+                    className="composer-plus-menu-action"
                     role="menuitem"
                     type="button"
                     onClick={() => { setPlusMenuOpen(false); fileInputRef.current?.click(); }}
-                    disabled={isStreaming}
+                    disabled={false}
                     title={t("chatInput.attachFile")}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",
                       padding: "7px 10px", border: 0, borderRadius: 5,
-                      background: "transparent", color: isStreaming ? "var(--text-dim)" : "var(--text-muted)",
-                      cursor: isStreaming ? "not-allowed" : "pointer", fontSize: 12, textAlign: "left",
-                      opacity: isStreaming ? 0.5 : 1,
+                      background: "transparent", color: "var(--text-muted)",
+                      cursor: "pointer", fontSize: 12, textAlign: "left",
                     }}
                   >
                     <Paperclip size={12} strokeWidth={1.8} style={{ flexShrink: 0 }} aria-hidden="true" />
                     <span style={{ flex: 1 }}>{t("chatInput.attachFile")}</span>
                   </button>
+                  {isMobile && onThinkingLevelChange && (
+                    <>
+                      <button
+                        className="composer-plus-menu-action"
+                        role="menuitem"
+                        type="button"
+                        aria-expanded={plusExpanded === "reasoning"}
+                        disabled={isStreaming}
+                        onClick={() => { if (!isStreaming) setPlusExpanded((value) => value === "reasoning" ? null : "reasoning"); }}
+                        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: 0, borderRadius: 5, background: plusExpanded === "reasoning" ? "var(--bg-selected)" : "transparent", color: "var(--text-muted)", cursor: isStreaming ? "not-allowed" : "pointer", fontSize: 12, textAlign: "left", opacity: isStreaming ? 0.5 : 1 }}
+                      >
+                        <Sparkles size={12} strokeWidth={1.8} aria-hidden="true" />
+                        <span style={{ flex: 1 }}>{t("chatInput.reasoningLabel")}</span>
+                        <span style={{ color: "var(--text-dim)", textTransform: "capitalize" }}>{thinkingDisplayLabel}</span>
+                        <ChevronDown size={12} strokeWidth={1.8} style={{ transform: plusExpanded === "reasoning" ? "rotate(180deg)" : "none" }} aria-hidden="true" />
+                      </button>
+                      {plusExpanded === "reasoning" && thinkingLevelOptions.map((level) => {
+                        const active = (thinkingLevel ?? "auto") === level;
+                        const mapped = level !== "auto" && thinkingLevelMap ? thinkingLevelMap[level] : undefined;
+                        const label = mapped != null && mapped !== level ? mapped : level;
+                        return (
+                          <button
+                            className="picker-row composer-plus-menu-action"
+                            role="menuitemradio"
+                            type="button"
+                            aria-checked={active}
+                            data-active={active}
+                            disabled={isStreaming}
+                            key={level}
+                            onClick={() => { if (!isStreaming) { setPlusMenuOpen(false); if (!active) onThinkingLevelChange(level); } }}
+                            style={{ paddingLeft: 30, cursor: isStreaming ? "not-allowed" : "pointer", opacity: isStreaming ? 0.5 : 1 }}
+                          >
+                            <span className="picker-check">{active && <Check size={11} strokeWidth={2} aria-hidden="true" />}</span>
+                            <span style={{ textTransform: "capitalize" }}>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+                  {isMobile && fastModeSupported && onFastModeChange && (
+                    <button
+                      className="composer-plus-menu-action"
+                      role="menuitemcheckbox"
+                      type="button"
+                      aria-checked={Boolean(fastModeEnabled)}
+                      disabled={isStreaming}
+                      onClick={() => { setPlusMenuOpen(false); if (!isStreaming) onFastModeChange(!fastModeEnabled); }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: 0, borderRadius: 5, background: "transparent", color: fastModeEnabled ? "var(--accent)" : "var(--text-muted)", cursor: isStreaming ? "not-allowed" : "pointer", fontSize: 12, textAlign: "left", opacity: isStreaming ? 0.5 : 1 }}
+                    >
+                      <Zap size={12} strokeWidth={1.8} aria-hidden="true" />
+                      <span style={{ flex: 1 }}>{t("chatInput.fastLabel")}</span>
+                      <span style={{ color: "var(--text-dim)" }}>{fastModeEnabled ? t("chatInput.plusOn") : t("chatInput.plusOff")}</span>
+                    </button>
+                  )}
+                  {isMobile && onCompact && (
+                    <button
+                      className="composer-plus-menu-action"
+                      role="menuitem"
+                      type="button"
+                      onClick={() => { setPlusMenuOpen(false); setContextOpen(true); }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: 0, borderRadius: 5, background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, textAlign: "left" }}
+                    >
+                      <Shrink size={12} strokeWidth={1.8} aria-hidden="true" />
+                      <span style={{ flex: 1 }}>{t("composerContext.title")}</span>
+                      {ringPct !== null && <span style={{ color: ringTone }}>{Math.round(ringPct)}%</span>}
+                    </button>
+                  )}
+                  {isMobile && (
+                    <button
+                      className="composer-plus-menu-action"
+                      role="menuitem"
+                      type="button"
+                      onClick={() => { setPlusMenuOpen(false); if (isRecording || isPaused || isReviewing || isTranscribing || transcribeError) cancelDictationAndReset(); else startFreshDictation(); }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: 0, borderRadius: 5, background: "transparent", color: transcribeError ? "var(--status-error)" : "var(--text-muted)", cursor: "pointer", fontSize: 12, textAlign: "left" }}
+                    >
+                      <Mic size={12} strokeWidth={1.8} aria-hidden="true" />
+                      <span>{isRecording || isPaused || isReviewing || isTranscribing || transcribeError ? t("chatInput.cancelDictation") : t("chatInput.startDictation")}</span>
+                    </button>
+                  )}
                   {onToolPresetChange && (
                     <>
                       <button
+                        className="composer-plus-menu-action"
                         role="menuitem"
                         type="button"
                         aria-expanded={plusExpanded === "tools"}
@@ -2561,7 +2650,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                         const isActive = (toolPreset ?? "full") === opt.value;
                         return (
                           <button
-                            className="picker-row"
+                            className="picker-row composer-plus-menu-action"
                             role="menuitemradio"
                             type="button"
                             aria-checked={isActive}
@@ -2583,6 +2672,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   {onAdvisorChange && (
                     <>
                       <button
+                        className="composer-plus-menu-action"
                         role="menuitem"
                         type="button"
                         aria-expanded={plusExpanded === "advisor"}
@@ -2602,7 +2692,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                       </button>
                       {plusExpanded === "advisor" && (
                         <button
-                          className="picker-row"
+                          className="picker-row composer-plus-menu-action"
                           role="menuitem"
                           type="button"
                           onClick={() => { setPlusMenuOpen(false); onAdvisorChange(!advisorEnabled); }}
@@ -2824,7 +2914,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
             {fastModeSupported && onFastModeChange && (
               <button
                 type="button"
-                className="composer-fast-control"
+                className="composer-fast-control composer-secondary-control"
                 onClick={() => { if (isStreaming) return; onFastModeChange(!fastModeEnabled); }}
                 disabled={isStreaming}
                 title={fastModeEnabled && fastModeActive === false ? "Fast mode is enabled but inactive for this model" : `Turn OMP Fast mode ${fastModeEnabled ? "off" : "on"} for this model`}
@@ -2856,7 +2946,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
 
             {/* Advisor activity — thunder while the advisor model reviews this run */}
             {advisorActive && (
-              <span
+              <span className="composer-advisor-activity"
                 title={t("chatInput.advisorReviewingTitle", {
                   model: advisorModel?.name ?? t("messageView.advisorLabel"),
                   reasoning: advisorModel?.reasoning ?? t("chatInput.advisorReasoningDefault"),
@@ -2873,10 +2963,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
 
             {/* Context ring: usage gauge opening the session context popover */}
             {onCompact && (
-              <div ref={contextWrapRef} style={{ position: "relative", flexShrink: 0 }}>
+              <div ref={contextWrapRef} className="composer-context-control" style={{ position: "relative", flexShrink: 0 }}>
                 <button
                   type="button"
-                  onClick={() => setContextOpen((open) => !open)}
+                  className="composer-context-trigger"
                   title={ringTitle}
                   aria-label={t("composerContext.title")}
                   aria-expanded={contextOpen}
@@ -2995,6 +3085,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
             {/* Dictation */}
             {isRecording || isPaused || isReviewing || isTranscribing || transcribeError ? (
               <button
+                className="composer-dictation-control"
                 type="button"
                 onClick={cancelDictationAndReset}
                 title={transcribeError ? t("chatInput.discardDictation") : t("chatInput.cancelDictation")}
@@ -3014,6 +3105,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               </button>
             ) : (
               <button
+                className="composer-dictation-control"
                 type="button"
                 onClick={startFreshDictation}
                 title={t("chatInput.startDictation")}
@@ -3062,7 +3154,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 }}
               >
                 <ListChecks size={13} strokeWidth={2} aria-hidden="true" />
-                {t("chatInput.queue")}
+                <span className="composer-primary-action-label">{t("chatInput.queue")}</span>
               </button>
             ) : isStreaming ? (
               <button
@@ -3085,7 +3177,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                   <rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" />
                 </svg>
-                {t("chatInput.stop")}
+                <span className="composer-primary-action-label">{t("chatInput.stop")}</span>
               </button>
             ) : (
               <button
@@ -3115,7 +3207,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                     <polyline points="7.5 3 12 7 7.5 11" />
                   </svg>
                 )}
-                {t("chatInput.send")}
+                <span className="composer-primary-action-label">{t("chatInput.send")}</span>
               </button>
             )}
           </div>

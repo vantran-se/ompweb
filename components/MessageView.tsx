@@ -1100,7 +1100,7 @@ const ToolCallBlock = memo(function ToolCallBlock({
             {isRunning && (resultText ?? "").trim() === "" ? (
               // No output yet: say so instead of the "(no output)" marker that
               // would claim the tool finished with nothing.
-              <div data-tool-running="true" style={{ color: "var(--text-dim)", fontSize: 12 }}>
+              <div data-tool-running="true" className="tool-call-running-status">
                 {t("chatWindow.runningTool")}
               </div>
             ) : result ? (

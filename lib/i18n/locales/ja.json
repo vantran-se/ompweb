@@ -372,7 +372,7 @@
   "chatInput.groupPrompts": "プロンプト",
   "chatInput.groupSkills": "スキル",
   "chatInput.dormant": "休止中",
-  "chatInput.imagesCannotQueue": "エージェントの実行中は画像添付をキューに入れられません",
+  "chatInput.queuedImages": "画像添付 {count} 件",
   "chatInput.indexTruncated": "インデックスは一部省略",
   "chatInput.inputHistory": "入力履歴",
   "chatInput.kindFollowUp": "フォローアップ",

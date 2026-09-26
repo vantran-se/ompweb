@@ -1019,15 +1019,15 @@ export const SessionSidebar = memo(function SessionSidebar({ selectedSessionId, 
     onSelectSession(s);
   }, [onSelectSession, expandProject]);
 
-  const handleNewSession = useCallback(() => {
-    if (!selectedCwd) return;
+  const startNewSession = useCallback((cwd: string | null) => {
+    if (!cwd) return;
     // Generate a temporary UUID client-side — no backend call needed.
     // Pi will be spawned lazily when the user sends the first message.
     const tempId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-    onNewSession?.(tempId, selectedCwd);
-  }, [selectedCwd, onNewSession]);
+    onNewSession?.(tempId, cwd);
+  }, [onNewSession]);
 
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -1228,24 +1228,24 @@ export const SessionSidebar = memo(function SessionSidebar({ selectedSessionId, 
           }}
         />
         <button
-          onClick={handleNewSession}
+          onClick={() => startNewSession(selectedCwd)}
           disabled={!selectedCwd}
           className="sidebar-new-session"
           title={selectedCwd ? t("sessionSidebar.newSessionIn", { cwd: selectedCwd }) : t("sessionSidebar.selectProjectFirst")}
           style={{
             width: "100%",
-            height: 38,
+            height: 34,
             boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: 7,
-            background: "var(--bg-hover)",
-            border: "1px solid var(--border)",
+            background: "transparent",
+            border: "1px solid transparent",
             borderRadius: "var(--radius-control)",
-            color: selectedCwd ? "var(--text)" : "var(--text-dim)",
+            color: selectedCwd ? "var(--text-muted)" : "var(--text-dim)",
             cursor: selectedCwd ? "pointer" : "not-allowed",
-            fontSize: 12.5,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "-0.01em",
             opacity: selectedCwd ? 1 : 0.65,
@@ -1253,12 +1253,12 @@ export const SessionSidebar = memo(function SessionSidebar({ selectedSessionId, 
           }}
           onMouseEnter={(e) => {
             if (!selectedCwd) return;
-            e.currentTarget.style.background = "var(--bg-selected)";
-            e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent) 30%, transparent)";
-          }}
-          onMouseLeave={(e) => {
             e.currentTarget.style.background = "var(--bg-hover)";
             e.currentTarget.style.borderColor = "var(--border)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderColor = "transparent";
           }}
         >
           <Plus size={15} strokeWidth={2.2} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden="true" />
@@ -1365,13 +1365,13 @@ export const SessionSidebar = memo(function SessionSidebar({ selectedSessionId, 
           )}
           {projectsError && (
             <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 4px", color: "var(--status-error)", fontSize: 12 }}>
-              <span>{projectsError}</span>
+              <span style={{ minWidth: 0, flex: "1 1 auto", overflowWrap: "anywhere" }}>{projectsError}</span>
               <button className="load-retry-button" type="button" onClick={() => { loadSessions(false); void loadProjects(); }} style={{ minHeight: 32, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg-panel)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t("sessionSidebar.refresh")}</button>
             </div>
           )}
           {error && (
             <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 4px", color: "var(--status-error)", fontSize: 12 }}>
-              <span>{error}</span>
+              <span style={{ minWidth: 0, flex: "1 1 auto", overflowWrap: "anywhere" }}>{error}</span>
               <button className="load-retry-button" type="button" onClick={() => { loadSessions(false); void loadProjects(); }} style={{ minHeight: 32, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg-panel)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t("sessionSidebar.refresh")}</button>
             </div>
           )}
@@ -1413,6 +1413,7 @@ export const SessionSidebar = memo(function SessionSidebar({ selectedSessionId, 
                 unreadSessionIds={unreadSessionIds}
                 relativeTimeNow={relativeTimeNow}
                 onActivate={activateProject}
+                onNewSession={startNewSession}
                 onToggleExpand={toggleProjectExpanded}
                 onRemoveProject={handleRemoveProject}
                 onEditLaunchConfig={setLaunchConfigProject}

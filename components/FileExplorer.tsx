@@ -366,6 +366,7 @@ const ExplorerRow = memo(function ExplorerRow({
           fontSize: 12,
           color: "var(--text)",
           overflow: "hidden",
+          minWidth: 0,
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           // Prefer the name, but let it shrink to keep row actions reachable.

@@ -1635,6 +1635,35 @@ test("a late full load cannot overwrite a newly started run", async () => {
   assert.equal(w.latest.agentRunning, true);
 });
 
+test("queued command successes retain compact attachment metadata for every command shape", async () => {
+  resetWorld();
+  primeSession("s1", [userMsg("u0", "q")]);
+  const w = await mountSession("s1");
+  const image = { data: "aGVsbG8=", mimeType: "image/png", previewUrl: "blob:preview" };
+
+  await act(async () => {
+    await w.latest.handleSteer("steer image", [image]);
+    await w.latest.handleFollowUp("follow image", [image]);
+    await w.latest.handlePromptWithStreamingBehavior("prompt image", "followUp", [image]);
+  });
+
+  const commands = callsTo("POST", "/api/agent/s1").slice(-3).map((call) => call.body);
+  assert.deepEqual(commands, [
+    { type: "steer", message: "steer image", images: [{ type: "image", data: "aGVsbG8=", mimeType: "image/png" }] },
+    { type: "follow_up", message: "follow image", images: [{ type: "image", data: "aGVsbG8=", mimeType: "image/png" }] },
+    { type: "prompt", message: "prompt image", streamingBehavior: "followUp", images: [{ type: "image", data: "aGVsbG8=", mimeType: "image/png" }] },
+  ]);
+  assert.deepEqual(w.latest.queuedMessages.steering.map(({ text, attachments }) => ({ text, attachments })), [
+    { text: "steer image", attachments: [{ mimeType: "image/png" }] },
+  ]);
+  assert.deepEqual(w.latest.queuedMessages.followUp.map(({ text, attachments }) => ({ text, attachments })), [
+    { text: "follow image", attachments: [{ mimeType: "image/png" }] },
+    { text: "prompt image", attachments: [{ mimeType: "image/png" }] },
+  ]);
+  assert.equal(sessionStorage.getItem("omp-queue-s1")?.includes("aGVsbG8="), false);
+  assert.equal(sessionStorage.getItem("omp-queue-s1")?.includes("blob:preview"), false);
+});
+
 test("same-text queued delivery is consumed live and committed only when its distinct ID is saved", async () => {
   resetWorld();
   primeSession("s1", [userMsg("u0", "q")]);
@@ -1646,7 +1675,9 @@ test("same-text queued delivery is consumed live and committed only when its dis
   });
   await settle();
   await act(async () => { await w.latest.handleFollowUp("same"); });
-  assert.deepEqual(w.latest.queuedMessages.followUp, ["same"]);
+  assert.deepEqual(w.latest.queuedMessages.followUp.map(({ text, attachments }) => ({ text, attachments })), [
+    { text: "same", attachments: [] },
+  ]);
   await act(async () => {
     es.emit({ type: "message_end", message: delivered }, { persist: false });
   });

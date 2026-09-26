@@ -195,7 +195,7 @@ export function DirectoryPicker({ onCancel, onSelect, busy = false, error }: Pro
             drives.length > 0 ? drives.map((entry) => (
               <button key={entry.path} className="directory-picker-entry" type="button" onClick={() => void navigateTo(entry.path)} title={entry.path} style={{ width: "100%", minHeight: 30, display: "flex", alignItems: "center", gap: 7, padding: "5px 8px", border: 0, borderRadius: 5, background: "none", color: "var(--text-muted)", cursor: "pointer", textAlign: "left", fontFamily: "var(--font-mono)", fontSize: 11 }}>
                 <DriveIcon />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
               </button>
             )) : <div style={{ padding: 8, color: "var(--text-dim)", fontSize: 11 }}>{t("directoryPicker.noDrives")}</div>
           ) : directories.length > 0 ? (
@@ -211,7 +211,7 @@ export function DirectoryPicker({ onCancel, onSelect, busy = false, error }: Pro
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
               >
                 <FolderIcon />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
               </button>
             ))
           ) : (
@@ -219,7 +219,7 @@ export function DirectoryPicker({ onCancel, onSelect, busy = false, error }: Pro
           )}
           {(loadError || error) && (
             <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px", color: "var(--status-error)", fontSize: 11 }}>
-              <span>{loadError ?? error}</span>
+              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{loadError ?? error}</span>
               <button className="load-retry-button" type="button" onClick={() => void navigateTo(currentPath || undefined)} style={{ minHeight: 32, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg-panel)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t("directoryPicker.retry")}</button>
             </div>
           )}

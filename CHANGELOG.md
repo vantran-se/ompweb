@@ -13,10 +13,23 @@ All notable changes to **omp-web** (`@kahme247/ompweb`) are documented in this f
 - Add an off-by-default **Scope native Select All (experimental)** switch in Settings → Interface & Behavior. The per-browser preference narrows whole-page selections from native menus while leaving keyboard scoping independent. Disable it if browser selection handles or menus behave unexpectedly; intentional whole-page selections can also be narrowed.
 - Play back a voice recording before transcribing or sending it. Pause keeps a left-side preview control; Stop opens a review deck with play, discard, and transcribe-and-send.
 - Link GitHub issue and pull-request references in chat messages. Bare `#123` links to the session checkout's GitHub repository (the `gh` default remote, else `upstream`, `github`, then `origin`); `owner/repo#123` links to that repository. Code spans and existing links are left unchanged.
+- Add a per-workspace **New Session** action to the sidebar so a fresh session can start directly in that workspace on desktop or mobile.
+- Allow image attachments in queued follow-up and steering messages, with attachment counts in the queue panel and compact metadata restored after reload.
 
 ### Fixes & Improvements
 
+- Reduce mobile composer clutter by moving reasoning, fast mode, context, and dictation into More actions while keeping model and send controls immediately available.
+- Refine workspace navigation with a narrower mobile drawer, quieter hover-revealed desktop row actions, clearer action grouping, and a less prominent global New Session control.
+- Move the desktop new-session form toward the top of the available workspace to reduce unused space and improve scan flow.
+- Avoid redundant new-session remounts and App Router fetches during workspace switching, and shorten mobile drawer motion to remove visible click lag and flashing.
+- Give the mobile session title a dedicated centered region, keep More controls as a compact single-row icon bar without horizontal dragging, and render the theme picker through a viewport-clamped portal so every option remains visible.
 - Improve phone and tablet ergonomics with safe-area-aware top chrome, a focus-trapped mobile workspace drawer, an actionable first-run workspace state, touch-sized sidebar actions, narrow-screen composer wrapping, clearer settings loading/retry states, and quieter streaming announcements.
+- Keep primary actions usable at responsive boundaries: use compact icon-only Send, Queue, and Stop actions on phones, switch the file panel to its established overlay through 1100px, cap oversized persisted sidebars on narrower desktops, preserve full touch targets in the narrow composer and Settings search, and prevent live status text from forcing horizontal overflow.
+- Align keyboard and streaming states across compact controls by preserving Tab order from the portaled theme menu, disabling reasoning changes during active runs, and keeping queued attachment actions visibly enabled.
+- Keep long text inside its surfaces across live tool cards, Markdown links and inline code, file and directory rows, and narrow update/settings cards; give the live “Running tool” status the same padded inset as completed output.
+- Make every Settings category phone-safe: stack shared setting cards and selects, keep provider actions labeled, wrap model thinking/retry controls, constrain Usage grids and tables, protect MCP names and project headers, and wrap update commands; redesign Agents as a full-width list-to-editor flow while preserving desktop layouts.
+- Keep phone layouts at the native viewport scale when Compact, Comfortable, or Large interface scaling is selected, avoiding mobile WebKit root-zoom narrowing while retaining desktop interface scaling.
+- Polish cross-surface consistency with one Settings content width, theme-aware accent foregrounds, full-size workspace and theme touch targets, and flex-safe sidebar errors while preserving the established shell and responsive hierarchy.
 - Keep the Extensions & Tools settings panel scrollable on desktop and touch layouts, including long MCP server lists.
 - Let non-native settings tabs render while the common OMP configuration loads, and show static MCP configuration before live status resolution.
 - Give the new-session workspace picker a calmer destination card with a folder badge, stronger focus and hover states, a compact path context line, and touch-friendly spacing while retaining the native accessible select behavior.
