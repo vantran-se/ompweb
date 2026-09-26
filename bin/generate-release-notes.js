@@ -77,7 +77,7 @@ function parseGitLog(rawLog) {
   return commits;
 }
 
-function cleanSubject(subject, repo = "kahme247/ompweb") {
+function cleanSubject(subject, repo = "vantran-se/ompweb") {
   let cleaned = subject.trim();
 
   cleaned = cleaned.replace(/^(?:feat|fix|perf|refactor|style|security|docs|chore|test|ci|build)(?:\([^)]+\))?!?:?\s*/i, "");
@@ -209,7 +209,7 @@ function formatReleaseNotes({
   if (!lines.join("\n").includes("## Upgrade")) {
     lines.push("\n## Upgrade\n");
     lines.push("```bash");
-    lines.push(`npm install -g @kahme247/ompweb@${version}`);
+    lines.push("curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh");
     lines.push("```");
   }
 
@@ -225,7 +225,7 @@ function formatReleaseNotes({
 
 function generateReleaseNotes({
   tag,
-  repo = process.env.GITHUB_REPOSITORY || "kahme247/ompweb",
+  repo = process.env.GITHUB_REPOSITORY || "vantran-se/ompweb",
   changelogPath = "CHANGELOG.md",
   cwd = process.cwd(),
 } = {}) {
@@ -291,7 +291,7 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   let tag = process.env.TAG || process.env.GITHUB_REF_NAME;
   let outputPath = null;
-  let repo = process.env.GITHUB_REPOSITORY || "kahme247/ompweb";
+  let repo = process.env.GITHUB_REPOSITORY || "vantran-se/ompweb";
   let changelogPath = "CHANGELOG.md";
 
   for (let i = 0; i < args.length; i++) {

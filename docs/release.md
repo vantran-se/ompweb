@@ -1,81 +1,59 @@
 # Release Checklist
 
-Each release publishes two artifacts:
+ompweb is distributed only through [GitHub Releases](https://github.com/vantran-se/ompweb/releases). npm is not a release channel; `@vantran-se/ompweb` is metadata identity only.
 
-- npm package: `@kahme247/ompweb`
-- GitHub Release: [kahme247/ompweb](https://github.com/kahme247/ompweb)
+Each `vX.Y.Z` release publishes:
 
-After the initial bootstrap release, publishing is performed by GitHub Actions
-with npm trusted publishing. No npm access token is stored in this repository
-or in GitHub secrets.
+- `ompweb-vX.Y.Z.tar.gz`
+- `SHA256SUMS`
+- `install.sh`
+- `install.ps1`
+- `install-release.mjs`
 
-## Bootstrap the first release
+## Prepare
 
-`@kahme247/ompweb` is not registered on npm yet. npm exposes trusted-publisher settings
-only for an existing package, so version `0.2.0` must be published once from a
-reviewed local checkout using the authenticated npm account:
-
-```bash
-npm ci
-npm test
-npm run build
-npm pack --dry-run
-npm publish --access public
-```
-
-Do not create a tag or GitHub Release for this bootstrap version: npm will
-reject a duplicate version.
-After this succeeds, configure trusted publishing before publishing any later
-version.
-
-## One-time trusted-publisher setup
-
-1. In npm, open the `@kahme247/ompweb` package settings and add a **GitHub Actions**
-   trusted publisher with:
-   - Owner: `kahme247`
-   - Repository: `ompweb`
-   - Workflow filename: `publish.yml`
-   - Environment: `npm`
-2. In GitHub, create the `npm` environment for this repository. Add required
-   reviewers if releases need approval.
-3. Confirm Actions are enabled for the repository.
-
-The workflow at `.github/workflows/publish.yml` requests `contents: write` to
-create the GitHub Release and `id-token: write` for trusted publishing. It
-installs npm 11.5.1 or newer, as required for trusted publishing. The OIDC
-permission lets npm verify the GitHub Actions identity and generate provenance
-for the published package.
-
-## Release later versions
-
-Run these from a clean `main` checkout after the release changes are merged.
+1. Update `package.json` and `CHANGELOG.md` to the same stable semantic version.
+2. Use Node.js 26.9.0 and npm 12.1.0.
+3. Verify from a clean checkout:
 
 ```bash
 npm ci
+npm run typecheck
+npm run lint
 npm test
 npm run build
-npm version <major|minor|patch>
-git push origin main --follow-tags
+npm audit --omit=dev --audit-level=high
 ```
 
-`npm version` updates `package.json` and `package-lock.json`, creates a commit,
-and creates a `v<version>` tag. Review the generated commit before pushing.
+4. Smoke-test the generated artifact and installer in isolated `HOME`, `XDG_DATA_HOME`, and `XDG_BIN_HOME` directories. Confirm install, repeated install, rollback, and uninstall.
+5. Confirm no test controls the developer's live user service. Tests calling `runWorker()` must use its isolated library defaults or inject a fake service.
 
-Pushing the tag starts the `Publish npm package` workflow. It checks out that
-immutable tag, verifies the tag matches `package.json`, installs from the
-lockfile, runs tests and the production build, then creates a draft GitHub
-Release with generated notes. It publishes `ompweb` through the configured
-trusted publisher and makes that release public only after npm accepts the
-package. A rerun can safely finish a release if npm has already accepted its
-version.
+## Publish
+
+Push the reviewed commit, then create and push the matching tag:
+
+```bash
+git tag -s vX.Y.Z -m "ompweb vX.Y.Z"
+git push origin main
+git push origin vX.Y.Z
+```
+
+`.github/workflows/publish.yml` verifies the tag/version match, installs dependencies, runs typecheck/lint/tests, builds the production app, creates checksummed assets, and publishes the GitHub Release. It does not publish to npm and requires no package-registry secret.
 
 ## Verify
 
 ```bash
-gh run list --repo kahme247/ompweb --workflow publish.yml --limit 1
-npm view @kahme247/ompweb@<version> version --registry https://registry.npmjs.org/
-npm view @kahme247/ompweb@<version> --json --registry https://registry.npmjs.org/
+gh run list --repo vantran-se/ompweb --workflow publish.yml --limit 1
+gh release view vX.Y.Z --repo vantran-se/ompweb
+curl -fsSL https://github.com/vantran-se/ompweb/releases/download/vX.Y.Z/SHA256SUMS
 ```
 
-Confirm the workflow succeeded, the exact package version resolves, and npm
-shows the expected provenance link.
+Check that every listed asset exists and matches `SHA256SUMS`. Then install into an isolated location using the public entrypoint:
+
+```bash
+curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh
+```
+
+Verify the installed version, web health endpoint, service restart, rollback, and preservation of `~/.omp/agent/web-service.env` and sessions.
+
+If verification fails, delete the broken GitHub Release and tag, fix the source, increment the version, and publish a new tag. Never replace an existing release asset in place; prepared in-app updates pin the asset URL and SHA-256 digest.

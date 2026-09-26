@@ -133,8 +133,8 @@ export function SystemSettings({
               <>
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("settingsConfig.runAppUpdateCommand")}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <code style={{ minWidth: 0, flex: "1 1 12rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{appUpdate.updateCommand || "npm install -g @kahme247/ompweb"}</code>
-                  <button type="button" onClick={() => copyCommand(appUpdate.updateCommand || "npm install -g @kahme247/ompweb")} style={{ ...actionStyle, gap: 5, padding: "4px 8px", fontSize: 11, cursor: "pointer" }}>
+                  <code style={{ minWidth: 0, flex: "1 1 12rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", wordBreak: "break-all" }}>{appUpdate.updateCommand || "curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh"}</code>
+                  <button type="button" onClick={() => copyCommand(appUpdate.updateCommand || "curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh")} style={{ ...actionStyle, gap: 5, padding: "4px 8px", fontSize: 11, cursor: "pointer" }}>
                     <Copy size={12} aria-hidden="true" /> {t("appShell.copyCommand")}
                   </button>
                 </div>

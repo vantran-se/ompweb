@@ -1,46 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Geist, JetBrains_Mono, Noto_Sans_Mono, Noto_Serif_SC, Source_Serif_4 } from "next/font/google";
+// Use system font stacks from globals.css. Build artifacts must not depend on
+// Google Fonts availability or mutable remote CSS responses.
 import { ThemeColor } from "@/hooks/useTheme";
 import { SIDEBAR_HISTORY_BRIDGE_SCRIPT } from "@/lib/sidebar-history-bridge";
 import "./globals.css";
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jb-mono",
-  display: "swap",
-});
-
-const notoSansMono = Noto_Sans_Mono({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-noto-mono",
-  display: "swap",
-});
-
-// Display serif pair for the warm-humanistic heading voice: Source Serif 4
-// covers latin, Noto Serif SC covers CJK. Both expose CSS variables consumed
-// by --font-serif in globals.css.
-const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
-  variable: "--font-source-serif",
-  display: "swap",
-});
-
-const notoSerifSC = Noto_Serif_SC({
-  // CJK glyphs are served via unicode-range slices regardless of subset;
-  // "latin" satisfies next/font's preloading requirement.
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-noto-serif",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "omp web",
@@ -72,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" translate="no" className={`${geist.variable} ${jetbrainsMono.variable} ${notoSansMono.variable} ${sourceSerif.variable} ${notoSerifSC.variable} notranslate`} suppressHydrationWarning>
+    <html lang="en" translate="no" className="notranslate" suppressHydrationWarning>
       <head>
         <ThemeColor />
         <meta name="google" content="notranslate" />

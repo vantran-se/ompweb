@@ -1,59 +1,55 @@
 # ompweb
 
-[![npm version](https://img.shields.io/npm/v/@kahme247/ompweb.svg?logo=npm&color=e05d44)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![node version](https://img.shields.io/node/v/@kahme247/ompweb.svg?logo=node.js&color=44cc11)](https://nodejs.org)
-[![license](https://img.shields.io/github/license/kahme247/ompweb.svg?color=44cc11)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/@kahme247/ompweb.svg?color=44cc11)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![GitHub stars](https://img.shields.io/github/stars/kahme247/ompweb.svg?logo=github)](https://github.com/kahme247/ompweb/stargazers)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kahme247/ompweb/pulls)
+[![GitHub release](https://img.shields.io/github/v/release/vantran-se/ompweb?logo=github)](https://github.com/vantran-se/ompweb/releases)
+[![license](https://img.shields.io/github/license/vantran-se/ompweb.svg?color=44cc11)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/vantran-se/ompweb.svg?logo=github)](https://github.com/vantran-se/ompweb/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/vantran-se/ompweb/pulls)
 
 [English](./README.md) | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
 コミュニティ：[OMPWEB Discord に参加](https://discord.gg/evqgGzRfM5)
 
-[oh-my-pi (omp)](https://github.com/can1357/oh-my-pi) コーディングエージェント向けのモダンな Web UI です。ローカルの omp セッションを読み込み、ブラウザから対話、プロジェクト閲覧、設定管理、ファイルプレビューを行えるワークスペースを提供します。
+[oh-my-pi (omp)](https://github.com/can1357/oh-my-pi) コーディングエージェント向けのモダンな Web UI です。ローカルの omp セッションを読み込み、ブラウザから対話、プロジェクト閲覧、設定管理、ファイルプレビューを行えます。
 
 ![ompweb — デモ](docs/demo.gif)
 
-<details>
-<summary>スクリーンショット（ライト / ダークテーマ）</summary>
-
-![ompweb — ライトテーマ](docs/screenshot-light.png)
-
-![ompweb — ダークテーマ](docs/screenshot-dark.png)
-
-</details>
-
 ## 必要条件
 
-- [omp](https://github.com/can1357/oh-my-pi) がインストールされ、`PATH` に含まれていること（または `OMP_WEB_OMP_BIN` で指定）
-- Node.js `>= 22.19.0`
+- `PATH` 上の [omp](https://github.com/can1357/oh-my-pi)（または `OMP_WEB_OMP_BIN` で指定）
+- Node.js 26 以降
+- Linux/macOS は `curl` と `tar`、Windows は PowerShell 7
 
-## クイックスタート
+## インストールと更新
 
-**インストールせずに直接実行:**
+ompweb は [vantran-se/ompweb の GitHub Releases](https://github.com/vantran-se/ompweb/releases) のビルド済み成果物だけで配布します。`@vantran-se/ompweb` はメタデータ上の名前であり、npm には公開しません。
 
-```bash
-npx @kahme247/ompweb@latest
-```
-
-**またはグローバルにインストール:**
+Linux/macOS:
 
 ```bash
-npm install -g @kahme247/ompweb
+curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh
 ompweb
 ```
 
-ブラウザで [http://127.0.0.1:30177](http://127.0.0.1:30177) を開きます。
+Windows (PowerShell 7):
 
-### CLI オプション
-
-```bash
-ompweb --port 8080                         # ポート番号指定
-ompweb --hostname 0.0.0.0                  # ネットワーク公開
-ompweb --password "your-password"          # パスワード認証を有効化
-ompweb --no-open                           # ブラウザ自動起動を無効化
+```powershell
+irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1 | iex
+ompweb
 ```
+
+同じコマンドで最新版へ更新できます。アンインストールは Linux/macOS で
+`curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh -s -- --uninstall`、Windows で
+`$i = [scriptblock]::Create((irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1)); & $i --uninstall` を実行します。
+
+インストーラーは `ompweb-v<version>.tar.gz` と `SHA256SUMS` を取得し、展開前に正確な SHA-256 を検証します。危険なパスやシンボリックリンクを拒否し、同一ファイルシステム上でステージして `current` をアトミックに切り替え、ロールバック用に前バージョンを保持します。
+
+Linux/macOS の既定ルートは `${XDG_DATA_HOME:-$HOME/.local/share}/ompweb`、バージョンは `releases/v<version>`、起動ラッパーは `${XDG_BIN_HOME:-$HOME/.local/bin}/ompweb` です。`OMPWEB_INSTALL_ROOT` で変更できます。`~/.omp/agent` の OMP 設定、認証情報、セッションは更新・削除されません。
+
+Linux の systemd ユーザーサービスと macOS の launchd ユーザーエージェントはログイン時に起動し、障害時に再起動し、安定したラッパー経由で更新後も動作します。Windows は `ompweb --install-tray` でログイン時自動起動、トレイ、デスクトップ/スタートメニューのショートカットを設定し、削除前に `ompweb --uninstall-tray` で解除します。
+
+アプリ内の「更新して再起動」も GitHub Releases を参照します。成果物を検証してステージし、管理中のセッションを停止してアトミックに切り替え、サービスまたはプロセスを再起動します。新サーバーが正常にならない場合は前バージョンを復元します。サービス設定、パスワード、ブラウザーセッションは保持されます。
+
+[http://127.0.0.1:30177](http://127.0.0.1:30177) を開いてください。
 
 ## 主な機能
 
@@ -86,7 +82,7 @@ ompweb --no-open                           # ブラウザ自動起動を無効�
 ## 開発
 
 ```bash
-git clone https://github.com/kahme247/ompweb.git
+git clone https://github.com/vantran-se/ompweb.git
 cd ompweb
 npm install
 npm run dev

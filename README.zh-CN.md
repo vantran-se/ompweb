@@ -1,59 +1,55 @@
 # ompweb
 
-[![npm version](https://img.shields.io/npm/v/@kahme247/ompweb.svg?logo=npm&color=e05d44)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![node version](https://img.shields.io/node/v/@kahme247/ompweb.svg?logo=node.js&color=44cc11)](https://nodejs.org)
-[![license](https://img.shields.io/github/license/kahme247/ompweb.svg?color=44cc11)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/@kahme247/ompweb.svg?color=44cc11)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![GitHub stars](https://img.shields.io/github/stars/kahme247/ompweb.svg?logo=github)](https://github.com/kahme247/ompweb/stargazers)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kahme247/ompweb/pulls)
+[![GitHub release](https://img.shields.io/github/v/release/vantran-se/ompweb?logo=github)](https://github.com/vantran-se/ompweb/releases)
+[![license](https://img.shields.io/github/license/vantran-se/ompweb.svg?color=44cc11)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/vantran-se/ompweb.svg?logo=github)](https://github.com/vantran-se/ompweb/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/vantran-se/ompweb/pulls)
 
 [English](./README.md) | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
 社区：[加入 OMPWEB Discord](https://discord.gg/evqgGzRfM5)
 
-[oh-my-pi (omp)](https://github.com/can1357/oh-my-pi) 编程智能体的现代 Web UI。它读取本地的 omp 会话，在浏览器中提供实时对话、项目会话浏览、配置管理和文件预览等功能。
+[oh-my-pi (omp)](https://github.com/can1357/oh-my-pi) 编程智能体的现代 Web UI。它读取本地 omp 会话，在浏览器中提供实时对话、项目浏览、配置管理和文件预览。
 
 ![ompweb — 演示](docs/demo.gif)
 
-<details>
-<summary>截图（浅色 / 深色主题）</summary>
-
-![ompweb — 浅色主题](docs/screenshot-light.png)
-
-![ompweb — 深色主题](docs/screenshot-dark.png)
-
-</details>
-
 ## 环境要求
 
-- 已安装 [omp](https://github.com/can1357/oh-my-pi) 且在 `PATH` 中（或通过 `OMP_WEB_OMP_BIN` 指定路径）
-- Node.js `>= 22.19.0`
+- 已安装 [omp](https://github.com/can1357/oh-my-pi) 且在 `PATH` 中（或通过 `OMP_WEB_OMP_BIN` 指定）
+- Node.js 26 或更高版本
+- Linux/macOS 需要 `curl` 和 `tar`；Windows 需要 PowerShell 7
 
-## 快速开始
+## 安装与更新
 
-**免安装直接运行：**
+ompweb 仅通过 [vantran-se/ompweb GitHub Releases](https://github.com/vantran-se/ompweb/releases) 分发构建产物。`@vantran-se/ompweb` 只是包元数据名称，不会发布到 npm。
 
-```bash
-npx @kahme247/ompweb@latest
-```
-
-**或全局安装：**
+Linux/macOS：
 
 ```bash
-npm install -g @kahme247/ompweb
+curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh
 ompweb
 ```
 
-在浏览器中打开 [http://127.0.0.1:30177](http://127.0.0.1:30177)。
+Windows (PowerShell 7)：
 
-### CLI 选项
-
-```bash
-ompweb --port 8080                         # 自定义端口
-ompweb --hostname 0.0.0.0                  # 监听网络地址
-ompweb --password "your-password"          # 启用密码保护
-ompweb --no-open                           # 不自动打开浏览器
+```powershell
+irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1 | iex
+ompweb
 ```
+
+再次运行相同命令即可更新。Linux/macOS 卸载命令为
+`curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh -s -- --uninstall`；Windows 卸载命令为
+`$i = [scriptblock]::Create((irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1)); & $i --uninstall`。
+
+安装程序下载 `ompweb-v<version>.tar.gz` 和 `SHA256SUMS`，在解压前严格验证 SHA-256，并拒绝危险路径和符号链接。它在同一文件系统上暂存版本，原子切换 `current`，并保留上一版本用于回滚。
+
+Linux/macOS 默认根目录为 `${XDG_DATA_HOME:-$HOME/.local/share}/ompweb`，版本位于 `releases/v<version>`，启动包装器位于 `${XDG_BIN_HOME:-$HOME/.local/bin}/ompweb`。可用 `OMPWEB_INSTALL_ROOT` 修改根目录。更新或卸载不会删除 `~/.omp/agent` 中的 OMP 配置、凭据和会话。
+
+Linux systemd 用户服务与 macOS launchd 用户代理会在登录时启动、故障后重启，并通过稳定包装器继续使用更新后的版本。Windows 可用 `ompweb --install-tray` 安装登录自启、系统托盘和桌面/开始菜单快捷方式；卸载 ompweb 前运行 `ompweb --uninstall-tray`。
+
+应用内“更新并重启”同样从 GitHub Releases 获取版本。它验证并暂存产物，停止由 ompweb 管理的会话，原子切换版本并重启服务或进程。如果新服务器未恢复健康，则还原并重启上一版本。服务配置、密码和浏览器会话都会保留。
+
+在浏览器中打开 [http://127.0.0.1:30177](http://127.0.0.1:30177)。
 
 ## 功能特性
 
@@ -86,7 +82,7 @@ ompweb --no-open                           # 不自动打开浏览器
 ## 本地开发
 
 ```bash
-git clone https://github.com/kahme247/ompweb.git
+git clone https://github.com/vantran-se/ompweb.git
 cd ompweb
 npm install
 npm run dev

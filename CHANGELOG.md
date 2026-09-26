@@ -1,8 +1,21 @@
 # Changelog
 
-All notable changes to **omp-web** (`@kahme247/ompweb`) are documented in this file.
+All notable changes to **omp-web** (`@vantran-se/ompweb`) are documented in this file.
 
 ---
+
+## 0.6.0 - 2026-09-26
+
+### Changed
+
+- Move the canonical repository and package metadata identity to `vantran-se/ompweb` and `@vantran-se/ompweb`.
+- Replace npm distribution with GitHub Release artifacts and checksum-verifying curl and PowerShell installers.
+- Add versioned installations with an atomic `current` activation, retained previous release, and rollback-aware in-app updates sourced from GitHub Releases.
+- Raise the runtime requirement to Node.js 26. Bun remains optional for launching release builds; Next.js remains the application and server framework.
+
+### Security
+
+- Validate release checksums and archive contents before extraction, use private same-filesystem staging, and fail closed on malformed release metadata or artifacts.
 
 ## 0.5.1 - 2026-09-26
 

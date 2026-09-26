@@ -21,9 +21,9 @@ do not assume that Pi-specific implementation changes can be merged unchanged.
 2. **Local-first by default.** The server binds to `127.0.0.1`; remote access
    is an explicit user choice and must be protected by a trusted network
    boundary and HTTPS.
-3. **Node-first installation.** A normal user installs Node.js 22.19+ and OMP,
-   then runs `npx ompweb@latest` or installs `ompweb` globally. ompweb does not
-   require users to install Bun for its own runtime.
+3. **Node-first installation.** Node.js 26 is the production runtime. Bun is
+   optional and may launch release builds, but shipped servers always run on
+   Node; users never need Bun.
 4. **Native compatibility over imitation.** Prefer OMP's CLI and documented
    on-disk formats to copied SDK internals. If a capability cannot be done
    safely through those boundaries, leave it out rather than emulating it
@@ -34,15 +34,43 @@ do not assume that Pi-specific implementation changes can be merged unchanged.
 
 ## Distribution and identity
 
-- npm package and CLI command: `ompweb`.
+- Canonical repository: `vantran-se/ompweb`; package metadata name:
+  `@vantran-se/ompweb`; CLI command: `ompweb`. The package is not published to
+  npm. User distribution is exclusively through GitHub Releases.
+- Every release provides `ompweb-v${version}.tar.gz` and `SHA256SUMS`. The
+  archive contains one `ompweb-v${version}/` root with the built `.next`,
+  runtime files, package manifests, public assets, scripts, license, and README.
+- Installers verify the exact checksum before extraction, reject absolute paths,
+  traversal, and symlinks, stage privately on the target filesystem, run
+  `npm ci --omit=dev` for the target OS, then atomically rename and switch the
+  `current` symlink. The previous release is retained for rollback.
+- Default install root: `${XDG_DATA_HOME:-$HOME/.local/share}/ompweb`; releases:
+  `releases/v${version}`; wrapper:
+  `${XDG_BIN_HOME:-$HOME/.local/bin}/ompweb`. The wrapper exports
+  `OMPWEB_INSTALL_ROOT` and executes `current/bin/omp-web.js` with Node.
+- The in-app updater discovers releases from `vantran-se/ompweb`, downloads and
+  verifies release assets, drains managed OMP sessions, atomically activates the
+  new release, and restarts the owning systemd/launchd/Windows process. Failed
+  health recovery rolls back and restarts the retained release. OMP state,
+  service configuration, passwords, and browser sessions remain intact.
+- systemd and launchd services invoke the stable wrapper. Windows uses its tray
+  manager and login autostart. Uninstall removes release files and wrappers but
+  preserves OMP-owned `~/.omp/agent` state.
 - Default server address: `http://127.0.0.1:30177`.
 - Existing `OMP_WEB_*` environment variables remain the configuration prefix
   for compatibility: `OMP_WEB_HOSTNAME`, `OMP_WEB_NO_OPEN`,
   `OMP_WEB_PASSWORD`, and `OMP_WEB_OMP_BIN`.
-- `PI_CODING_AGENT_DIR` and OMP's own directory conventions are
-  respected because they identify the user's existing OMP state.
-- The web UI displays its own package version separately from the detected
-  installed OMP version; those versions may legitimately differ.
+- `PI_CODING_AGENT_DIR` and OMP's own directory conventions are respected
+  because they identify the user's existing OMP state.
+- The web UI displays its own release version separately from the detected OMP
+  version; those versions may legitimately differ.
+
+### Why Next.js, not Vite
+
+The App Router, route handlers, proxy/auth boundary, and Node server are one
+deployment unit. Vite would replace those server contracts rather than merely
+change the frontend bundler, making the migration a rewrite without a user
+benefit. Next.js and the Node runtime therefore remain architectural choices.
 
 ## Runtime architecture
 

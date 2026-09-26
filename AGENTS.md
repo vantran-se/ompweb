@@ -13,6 +13,13 @@ Lint: `npm run lint`
 The dev server needs the `omp` binary installed (on `PATH`, or set `OMP_WEB_OMP_BIN`).
 All live-agent features go through it; session browsing works without it.
 
+Release development uses Node.js 26. GitHub Releases in `vantran-se/ompweb` are
+the only user distribution channel; `@vantran-se/ompweb` is metadata and is not
+published to npm. Bun may optionally launch a release build, but Node remains
+the runtime. Preserve the checksum-verified, atomic installer/updater and its
+rollback path. Do not migrate to Vite: replacing Next App Router routes,
+proxy/auth, and the server would be an application rewrite.
+
 ---
 
 ## Architecture
@@ -318,12 +325,16 @@ handled or safely ignored.
 - Skill toggling edits only the `disable-model-invocation` frontmatter key on the target `SKILL.md`; keep that surgical so user formatting survives.
 - `/api/skills/install` shells through `npx skills add ... --agent universal`, which installs into the ecosystem-standard `.agents/skills` dirs omp reads; project installs run with the selected cwd.
 
-### Update notifications (`/api/omp-update`, `/api/app-update`)
-- Automatic in-app self-updating has been removed in favor of explicit user notifications and manual terminal commands.
-- `GET /api/app-update` queries the npm registry for `@kahme247/ompweb` updates, detects the install manager (`bun` vs `npm` via `detectInstallMethod`), and returns `updateAvailable` plus the exact terminal command (e.g. `npm install -g @kahme247/ompweb` or `bun add -g @kahme247/ompweb`).
-- `POST /api/omp-update` (`action: "check"`) runs `omp update --check` and returns `updateAvailable` plus `updateCommand: "omp update"`.
-- `POST /api/omp-update` (`action: "restart"`) restarts active OMP sessions after a manual CLI update.
-- Notifications in `AppShell` and settings cards in `SettingsConfig` present the update notification alongside copyable terminal update commands.
+### Updates (`/api/omp-update`, `/api/app-update`)
+- `GET /api/app-update` queries GitHub Releases for `vantran-se/ompweb` and
+  preserves the client status shape while reporting the release installer path.
+- The app update action downloads the versioned asset and `SHA256SUMS`, verifies
+  and stages the release, drains managed sessions, activates it atomically, and
+  restarts. Failed health recovery must restore and restart the previous release.
+- `POST /api/omp-update` remains independent: it checks the installed OMP CLI
+  and restarts active OMP sessions after an OMP update.
+- `AppShell` and `SettingsConfig` distinguish GitHub application releases from
+  OMP runtime updates.
 
 ### Auth and model config
 - Auth flows go through RPC commands (`get_login_providers`, `login`) against the omp child process; credentials live in omp's `agent.db` (SQLite) which omp-web never touches directly.

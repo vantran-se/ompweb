@@ -2,6 +2,7 @@ import {
   chmodSync,
   copyFileSync,
   existsSync,
+  realpathSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -16,7 +17,7 @@ import { spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { dirname, join, posix, resolve, win32 } from "path";
-import { checkNpmUpdate, detectInstallMethod } from "./npm-update";
+import { checkGitHubUpdate, type GitHubReleaseDescriptor } from "./github-update";
 import { checkOmpUpdate } from "./omp/updates";
 import { DISABLE_AUTOUPDATE_ENV_VAR, isUpdateDisabled } from "./update-policy";
 
@@ -41,6 +42,7 @@ export interface SelfUpdateStatus {
 interface StoredStatus extends SelfUpdateStatus {
   workerPid?: number;
   managerPid?: number;
+  release?: GitHubReleaseDescriptor;
 }
 export interface PrepareResult {
   attemptId: string;
@@ -273,30 +275,44 @@ export function cleanupStaleSelfUpdate(now = Date.now(), kind: Kind = "app"): vo
 }
 
 export function getSelfUpdateStatus(kind: Kind = "app"): SelfUpdateStatus | null {
-  const s = readStateJson<StoredStatus>(statusPath(kind));
-  if (!s) return null;
-  // minimal validation
-  if (typeof s.attemptId !== "string" || typeof s.state !== "string") return null;
-  return s;
+  const status = readStateJson<StoredStatus>(statusPath(kind));
+  if (!status || typeof status.attemptId !== "string" || typeof status.state !== "string") return null;
+  const publicStatus = { ...status };
+  delete publicStatus.workerPid;
+  delete publicStatus.managerPid;
+  delete publicStatus.release;
+  return publicStatus;
 }
 export function getSelfUpdateSupport(): { supported: boolean; reason?: string; packageDir: string } {
-  const packageDir = process.env.OMP_WEB_PACKAGE_DIR ?? resolve(join(import.meta ? dirname(new URL(import.meta.url).pathname) : process.cwd(), ".."));
+  const packageDir = resolve(process.env.OMP_WEB_PACKAGE_DIR ?? process.cwd());
   if (isUpdateDisabled()) {
     return { supported: false, reason: `Updates are disabled by ${DISABLE_AUTOUPDATE_ENV_VAR}`, packageDir };
   }
-  // simplified: always supported if packageDir exists
+  const installRoot = process.env.OMPWEB_INSTALL_ROOT;
+  if (!installRoot) {
+    return {
+      supported: false,
+      reason: "Automatic updates require a GitHub Release installation",
+      packageDir,
+    };
+  }
   try {
+    const current = realpathSync(join(installRoot, "current"));
+    const inCurrentRelease = packageDir === current
+      || packageDir.startsWith(`${current}${posix.sep}`)
+      || packageDir.startsWith(`${current}${win32.sep}`);
+    if (!inCurrentRelease) {
+      return { supported: false, reason: "Automatic updates require the active GitHub Release installation", packageDir };
+    }
     if (!existsSync(packageDir)) return { supported: false, reason: "package dir not found", packageDir };
-    return { supported: true, packageDir: resolve(packageDir) };
+    return { supported: true, packageDir };
   } catch {
     return { supported: false, reason: "unsupported", packageDir };
   }
 }
 
-function detectManager(packageDir: string): { manager: "npm" | "bun"; managerPath: string; prefix: string[] } {
-  const manager = detectInstallMethod(packageDir);
-  const managerPath = manager === "bun" ? "bun" : "npm";
-  return { manager, managerPath, prefix: [] };
+function detectOmpManager(): { manager: "npm"; managerPath: string; prefix: string[] } {
+  return { manager: "npm", managerPath: "npm", prefix: [] };
 }
 
 export async function prepareSelfUpdate(kind: Kind = "app"): Promise<PrepareResult> {
@@ -311,6 +327,7 @@ export async function prepareSelfUpdate(kind: Kind = "app"): Promise<PrepareResu
   }
   let currentVersion: string;
   let targetVersion: string;
+  let release: GitHubReleaseDescriptor | undefined;
   if (kind === "omp") {
     const ompStatus = await checkOmpUpdate(true);
     if (!ompStatus.updateAvailable || !ompStatus.availableVersion) {
@@ -319,12 +336,16 @@ export async function prepareSelfUpdate(kind: Kind = "app"): Promise<PrepareResu
     currentVersion = ompStatus.currentVersion ?? "unknown";
     targetVersion = ompStatus.availableVersion;
   } else {
-    const npmStatus = await checkNpmUpdate(true);
-    if (!npmStatus.updateAvailable || !npmStatus.availableVersion) {
+    if (!getSelfUpdateSupport().supported) {
+      throw new SelfUpdateError("unsupported_install", "Automatic updates require a GitHub Release installation", 409);
+    }
+    const githubStatus = await checkGitHubUpdate(true);
+    if (!githubStatus.updateAvailable || !githubStatus.availableVersion || !githubStatus.release) {
       throw new SelfUpdateError("no_update_available", "No update available", 409);
     }
-    currentVersion = npmStatus.currentVersion;
-    targetVersion = npmStatus.availableVersion;
+    currentVersion = githubStatus.currentVersion;
+    targetVersion = githubStatus.availableVersion;
+    release = githubStatus.release;
   }
   const attemptId = randomUUID();
   const preparedAt = new Date().toISOString();
@@ -337,6 +358,7 @@ export async function prepareSelfUpdate(kind: Kind = "app"): Promise<PrepareResu
     fromVersion: currentVersion,
     targetVersion,
     preparedAt,
+    release,
   };
   atomicWrite(statusFile, JSON.stringify(stored));
   // copy worker
@@ -344,18 +366,18 @@ export async function prepareSelfUpdate(kind: Kind = "app"): Promise<PrepareResu
   const attemptDir = join(attempts, attemptId);
   mkdirSync(attemptDir, { mode: 0o700, recursive: true });
   secureDirectory(attemptDir);
-  const srcWorker = resolve(join(dirname(new URL(import.meta.url).pathname), "..", "bin", "omp-web-update-worker.js"));
-  // fallback to CWD relative
-  let workerSrc = srcWorker;
-  if (!existsSync(workerSrc)) {
-    workerSrc = resolve(join(process.cwd(), "bin", "omp-web-update-worker.js"));
-  }
+  const packageDir = resolve(process.env.OMP_WEB_PACKAGE_DIR ?? process.cwd());
+  const workerSrc = join(packageDir, "bin", "omp-web-update-worker.js");
+  const installerSrc = join(packageDir, "scripts", "install-release.mjs");
   const destWorker = join(attemptDir, "worker.js");
-  if (existsSync(workerSrc)) {
-    copyFileSync(workerSrc, destWorker);
-    try {
-      chmodSync(destWorker, 0o600);
-    } catch {}
+  if (!existsSync(workerSrc)) throw new SelfUpdateError("missing_worker", "Update worker is unavailable", 500);
+  copyFileSync(workerSrc, destWorker);
+  chmodSync(destWorker, 0o600);
+  if (kind === "app") {
+    if (!existsSync(installerSrc)) throw new SelfUpdateError("missing_installer", "Release installer is unavailable", 500);
+    const destInstaller = join(attemptDir, "install-release.mjs");
+    copyFileSync(installerSrc, destInstaller);
+    chmodSync(destInstaller, 0o600);
   }
   // write ready marker
   atomicWrite(markerPath(attemptId, "ready", kind), JSON.stringify({ attemptId, preparedAt }));
@@ -403,13 +425,16 @@ export function commitSelfUpdate(attemptId: string, kind: Kind = "app"): { accep
   const workerPath = attempts ? join(attempts, attemptId, "worker.js") : null;
   const root = rootDir(kind);
   const packageDir = process.env.OMP_WEB_PACKAGE_DIR ?? process.cwd();
-  const { manager, managerPath, prefix } = detectManager(packageDir);
+  const { manager, managerPath, prefix } = detectOmpManager();
   const fromVersion = status.fromVersion;
   const targetVersion = status.targetVersion;
   const descriptor = {
     launcherPath: join(resolve(packageDir), "bin", "omp-web.js"),
-    hostname: process.env.OMP_WEB_HOSTNAME ?? process.env.HOSTNAME ?? "127.0.0.1",
+    hostname: process.env.OMP_WEB_HOSTNAME ?? "127.0.0.1",
     port: Number(process.env.OMP_WEB_PORT ?? process.env.PORT ?? 30178),
+    installRoot: process.env.OMPWEB_INSTALL_ROOT,
+    release: status.release,
+    installerPath: attempts ? join(attempts, attemptId, "install-release.mjs") : null,
   };
   const args = [
     workerPath ?? "",
@@ -431,6 +456,7 @@ export function commitSelfUpdate(attemptId: string, kind: Kind = "app"): { accep
     String(process.env.OMP_WEB_LAUNCHER_PID ?? process.pid),
     "--server-pid",
     String(process.pid),
+    "--descriptor",
     JSON.stringify(descriptor),
     "--manager-prefix",
     JSON.stringify(prefix),

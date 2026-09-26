@@ -201,7 +201,7 @@ export function AppUpdateDialog({ open, update, phase, visibleStage, error, onPr
     return () => controller.abort();
   }, [availableVersion, releaseNotes?.version, shouldLoadReleaseNotes]);
   const busy = phase === "preparing" || phase === "restarting" || phase === "completed";
-  const command = update?.updateCommand || "npm install -g @kahme247/ompweb";
+  const command = update?.updateCommand || "curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh";
   const completedVersion = update?.selfUpdateStatus?.targetVersion ?? update?.availableVersion ?? update?.currentVersion ?? "?";
   const versionTransition = getAppUpdateVersionTransition(update, phase);
   const effectiveStage = visibleStage ?? update?.selfUpdateStatus?.stage;

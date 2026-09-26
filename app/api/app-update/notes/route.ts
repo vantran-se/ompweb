@@ -1,5 +1,5 @@
 import { getGitHubReleaseNotes } from "@/lib/github-release-notes";
-import { checkNpmUpdate } from "@/lib/npm-update";
+import { checkGitHubUpdate } from "@/lib/github-update";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ function noContent(): Response {
 
 export async function GET() {
   try {
-    const status = await checkNpmUpdate(false);
+    const status = await checkGitHubUpdate(false);
     if (!status.updateAvailable || !status.availableVersion) return noContent();
 
     const notes = await getGitHubReleaseNotes(status.availableVersion);

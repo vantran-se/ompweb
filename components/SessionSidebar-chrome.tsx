@@ -227,7 +227,7 @@ function SidebarPortalMenu({
       ref={menuRef}
       onClickCapture={(event) => {
         const target = event.target;
-        if (target instanceof Element && target.closest('[role="menuitem"]')) closeAndRestore();
+        if (target instanceof Element && target.closest('[role="menuitem"]')) onClose();
       }}
       role="menu"
       style={{

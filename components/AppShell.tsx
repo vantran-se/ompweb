@@ -341,7 +341,7 @@ export function AppShell() {
           setAppUpdateDialogOpen(true);
         }
       } else {
-        const cmd = data.updateCommand || "npm install -g @kahme247/ompweb";
+        const cmd = data.updateCommand || "curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh";
         const version = data.availableVersion;
         if (readDismissedVersion(DISMISSED_APP_UPDATE_KEY) === version) return data;
         toast.info(

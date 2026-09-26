@@ -1,4 +1,4 @@
-name: Publish npm package
+name: Publish GitHub Release
 
 on:
   push:
@@ -7,93 +7,65 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
-    environment: npm
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 26.9.0
+          cache: npm
+
+      - name: Install npm 12.1.0
+        run: npm install --global npm@12.1.0
 
       - name: Verify tag matches package version
         run: |
           VERSION="$(node -p 'require("./package.json").version')"
           test "$GITHUB_REF_NAME" = "v$VERSION"
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76
         with:
-          node-version-file: .nvmrc
-          cache: npm
-          registry-url: https://registry.npmjs.org
+          bun-version: latest
 
-      - run: npm install --global npm@^11.5.1
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-
-      - name: Create draft GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+      - name: Build application
         run: |
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            node bin/generate-release-notes.js --tag "$TAG" --output release-notes.md
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file release-notes.md --draft
-          fi
-
-      - name: Publish to npm
-        run: |
-          PACKAGE_NAME="$(node -p 'require("./package.json").name')"
-          VERSION="$(node -p 'require("./package.json").version')"
-          if npm view "$PACKAGE_NAME@$VERSION" version --registry https://registry.npmjs.org/ >/dev/null 2>&1; then
-            echo "$PACKAGE_NAME@$VERSION is already published"
+          if node -e 'const p=require("./package.json");process.exit(p.scripts?.["build:bun"]?0:1)'; then
+            bun run build:bun
           else
-            npm publish --provenance --access public
+            npm run build
           fi
 
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
-
-  notify-discord:
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - name: Post release notes to Discord
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+      - name: Build release assets
         run: |
-          DISCORD_WEBHOOK_URL="$(printf '%s' "$DISCORD_WEBHOOK_URL" | tr -d '\r\n')"
-          case "$DISCORD_WEBHOOK_URL" in
-            https://discord.com/api/webhooks/*/*) ;;
-            *) echo 'DISCORD_RELEASES_WEBHOOK is not a valid Discord webhook URL' >&2; exit 1 ;;
-          esac
+          VERSION="${GITHUB_REF_NAME#v}"
+          node scripts/build-release-asset.mjs "$VERSION"
+          cp install.sh install.ps1 scripts/install-release.mjs dist/
+          cd dist
+          sha256sum ompweb-v"$VERSION".tar.gz install.sh install.ps1 install-release.mjs > SHA256SUMS
 
-          RELEASE_JSON="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body,url)"
-
-          jq -n \
-            --arg body "$(jq -r '.body' <<<"$RELEASE_JSON")" \
-            --arg title "OMPWEB $TAG" \
-            --arg url "$(jq -r '.url' <<<"$RELEASE_JSON")" \
-            '{
-              username: "OMPWEB Releases",
-              embeds: [{
-                title: $title,
-                url: $url,
-                description: $body[0:3800],
-                color: 15105570,
-                footer: {text: "GitHub Release"}
-              }]
-            }' > discord-release.json
-
-          curl --fail-with-body \
-            --header "Content-Type: application/json" \
-            --data @discord-release.json \
-            "$DISCORD_WEBHOOK_URL"
+      - name: Publish immutable GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/ompweb-*.tar.gz dist/SHA256SUMS dist/install.sh dist/install.ps1 dist/install-release.mjs

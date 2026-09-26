@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isApiRequestOriginAllowed, shouldCheckApiRequestOrigin } from "@/lib/request-security";
 import { parseJsonWithinLimit, RequestBodyTooLargeError } from "@/lib/bounded-form-data";
-import { checkNpmUpdate } from "@/lib/npm-update";
+import { checkGitHubUpdate } from "@/lib/github-update";
 import {
   abortPreparedSelfUpdate,
   acknowledgeSelfUpdate,
@@ -48,7 +48,7 @@ function errorResponse(error: unknown): NextResponse {
 
 export async function GET(request: Request) {
   const force = new URL(request.url).searchParams.get("force") === "1";
-  const status = await checkNpmUpdate(force);
+  const status = await checkGitHubUpdate(force);
   const support = getSelfUpdateSupport();
   const selfUpdateStatus = status.updatesDisabled ? null : getSelfUpdateStatus();
   return NextResponse.json({

@@ -1,11 +1,9 @@
 # ompweb
 
-[![npm version](https://img.shields.io/npm/v/@kahme247/ompweb.svg?logo=npm&color=e05d44)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![node version](https://img.shields.io/node/v/@kahme247/ompweb.svg?logo=node.js&color=44cc11)](https://nodejs.org)
-[![license](https://img.shields.io/github/license/kahme247/ompweb.svg?color=44cc11)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/@kahme247/ompweb.svg?color=44cc11)](https://www.npmjs.com/package/@kahme247/ompweb)
-[![GitHub stars](https://img.shields.io/github/stars/kahme247/ompweb.svg?logo=github)](https://github.com/kahme247/ompweb/stargazers)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kahme247/ompweb/pulls)
+[![GitHub release](https://img.shields.io/github/v/release/vantran-se/ompweb?logo=github)](https://github.com/vantran-se/ompweb/releases)
+[![license](https://img.shields.io/github/license/vantran-se/ompweb.svg?color=44cc11)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/vantran-se/ompweb.svg?logo=github)](https://github.com/vantran-se/ompweb/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/vantran-se/ompweb/pulls)
 
 [English](./README.md) | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
@@ -27,27 +25,69 @@ A clean, modern web UI for the [oh-my-pi (omp)](https://github.com/can1357/oh-my
 ## Requirements
 
 - [omp](https://github.com/can1357/oh-my-pi) installed and available on your `PATH` (or specified via `OMP_WEB_OMP_BIN`)
-- Node.js `>= 22.19.0`
+- Node.js 26 or newer
+- `curl` and `tar` on Linux/macOS, or PowerShell 7 on Windows
 
-## Quick Start
+## Install
 
-**Run directly without installing:**
+ompweb is distributed exclusively as checksum-verified build artifacts from
+[GitHub Releases](https://github.com/vantran-se/ompweb/releases). The package
+name `@vantran-se/ompweb` is metadata only; it is not published to npm.
 
-```bash
-npx @kahme247/ompweb@latest
-```
-
-or
-```bash
-nix run github:kahme247/ompweb
-```
-
-**Or install globally:**
+### Linux and macOS
 
 ```bash
-npm install -g @kahme247/ompweb
+curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh
 ompweb
 ```
+
+Update to the latest release by running the same installer. Remove the app and
+its release files with:
+
+```bash
+curl -fsSL https://github.com/vantran-se/ompweb/releases/latest/download/install.sh | sh -s -- --uninstall
+```
+
+### Windows (PowerShell 7)
+
+```powershell
+irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1 | iex
+ompweb
+```
+
+Run the same command to update. To uninstall:
+
+```powershell
+$i = [scriptblock]::Create((irm https://github.com/vantran-se/ompweb/releases/latest/download/install.ps1)); & $i --uninstall
+```
+
+The installer fetches `ompweb-v<version>.tar.gz` and `SHA256SUMS`, verifies the
+exact SHA-256 before extraction, rejects unsafe archive paths and symlinks, and
+runs `npm ci --omit=dev` in a private staged release. It then atomically switches
+`current` to the new version. The previous release is retained for rollback.
+
+### Install layout and services
+
+On Linux/macOS, the default root is
+`${XDG_DATA_HOME:-$HOME/.local/share}/ompweb`; releases are stored under
+`releases/v<version>`, `current` points at the active release, and the
+`${XDG_BIN_HOME:-$HOME/.local/bin}/ompweb` wrapper launches it with Node. Set
+`OMPWEB_INSTALL_ROOT` to use another root. OMP sessions, credentials, and app
+configuration remain in `~/.omp/agent` and are not removed by uninstall.
+
+Linux service commands install a systemd **user** unit; macOS service commands
+install a launchd user agent. Both start at login, restart after failure, and
+continue through upgrades because they invoke the stable wrapper. Windows can
+install the existing System Tray manager with `ompweb --install-tray`; it adds
+login autostart and Desktop/Start Menu shortcuts. Remove it first with
+`ompweb --uninstall-tray` when uninstalling ompweb.
+
+The in-app **Update and restart** action also uses GitHub Releases. It downloads
+and verifies the release and checksum, stages it on the installation filesystem,
+stops ompweb-managed sessions, switches releases atomically, and restarts the
+configured service or process. If the new server does not become healthy, the
+updater restores the previous release and restarts it. OMP state, passwords,
+service configuration, and browser sessions are preserved.
 
 Open [http://127.0.0.1:30177](http://127.0.0.1:30177) in your browser.
 
@@ -58,138 +98,30 @@ ompweb --port 8080                         # Custom port
 ompweb --hostname 0.0.0.0                  # Listen on network
 ompweb --password "your-password"          # Enable password protection
 ompweb --no-open                           # Don't auto-open the browser
-ompweb --install-tray                      # Install Windows System Tray service & Desktop shortcuts
-ompweb --uninstall-tray                    # Uninstall Windows System Tray service & shortcuts
-ompweb --tray                              # Start background System Tray manager
+ompweb --install-tray                      # Install Windows tray service
+ompweb --uninstall-tray                    # Remove Windows tray service
+ompweb --tray                              # Start Windows tray manager
 ompweb systemd install                     # Install Linux systemd user service
-ompweb --help                              # Show help
-ompweb --version                           # Show version
+ompweb --help
+ompweb --version
 ```
 
-### Run as a Windows Service (System Tray)
-
-Install ompweb as a Windows background service with a system tray icon and autostart at login:
-
-```bash
-ompweb --install-tray
-```
-
-Manage it from **Settings → System & Updates → Windows Background Service**, or via CLI:
-
-```bash
-ompweb --tray          # Start the tray manager
-ompweb --uninstall-tray
-```
-
-Shortcuts are created on the Desktop and Start Menu. The service restarts automatically and shows the current port and status in the tray.
-
-### Run as a macOS Service (launchd)
-
-Install ompweb as a launchd user agent that starts at login and restarts on crash:
-
-```bash
-npx --yes @kahme247/ompweb@latest ompweb-launchd install
-```
-
-Manage it with:
-
-```bash
-npx --yes @kahme247/ompweb@latest ompweb-launchd status      # Show service state
-npx --yes @kahme247/ompweb@latest ompweb-launchd uninstall   # Stop and remove
-```
-
-The service runs `npx --yes @kahme247/ompweb@latest`; pass a package spec to pin a
-version, e.g. `ompweb-launchd install @kahme247/ompweb@0.3.6`. All
-[environment variables](#environment-variables) are read at install time and baked
-into the plist, plus `OMP_WEB_PKG` (package spec, same as the positional argument).
-As a service, the browser is **not** auto-opened by default — install with
-`OMP_WEB_NO_OPEN=0` to restore that.
-
-```bash
-OMP_WEB_PASSWORD=secret npx --yes @kahme247/ompweb@latest ompweb-launchd install
-```
-
-When binding to a non-loopback host, require authentication (`OMP_WEB_PASSWORD`
-or equivalent access control) and HTTPS through a trusted reverse proxy or VPN.
-Never expose the unauthenticated web UI or send its password/session cookie over
-plaintext HTTP.
-
-Logs go to `~/Library/Logs/ompweb/ompweb.log` and the plist lives at
-`~/Library/LaunchAgents/com.kahme247.ompweb.plist` (mode 600; a configured
-password is stored there in plain text).
-
-### Run as a Linux Service (systemd)
-
-Install ompweb as a systemd **user** service that starts at login and restarts
-on crash:
-
-```bash
-npx --yes --package=@kahme247/ompweb@latest ompweb-systemd install
-```
-The installer creates `~/.omp/agent/web-service.env` automatically with mode
-`600`; no manual file creation is required. The explicit `--package` form makes
-`npx` run the systemd executable from the selected package.
-
-To bind the service to all IPv4 interfaces for LAN access, set a password while
-installing:
-
-```bash
-OMP_WEB_HOSTNAME=0.0.0.0 OMP_WEB_PASSWORD='change-me' \
-  npx --yes --package=@kahme247/ompweb@latest ompweb-systemd install
-```
-
-Manage it with:
-
-```bash
-npx --yes --package=@kahme247/ompweb@latest ompweb-systemd status    # Show service state
-npx --yes --package=@kahme247/ompweb@latest ompweb-systemd restart   # start / stop / restart
-npx --yes --package=@kahme247/ompweb@latest ompweb-systemd uninstall # Stop and remove
-```
-
-The service runs the locally installed `ompweb` binary resolved at install time
-(override with `OMP_WEB_SYSTEMD_BIN`). Runtime configuration lives in
-`~/.omp/agent/web-service.env` — the tray (or any editor) can change the port,
-hostname, and password there and just restart the service; no reinstall needed.
-Install-time [environment variables](#environment-variables) are baked into
-that file. As a service, the browser is **not** auto-opened by default. The
-unit lives at `~/.config/systemd/user/ompweb.service` and logs go to the
-journal:
-
-```bash
-journalctl --user -u ompweb -f
-```
-
-On a headless server, enable user lingering if the service must keep running
-after the last login session ends:
-
-```bash
-loginctl enable-linger "$USER"
-```
-
+When binding to a non-loopback host, require authentication and HTTPS through a
+trusted reverse proxy or VPN. Never expose the unauthenticated UI or send its
+password/session cookie over plaintext HTTP.
 ### Linux System Tray (KDE Plasma and compatible)
 
-On Linux, `ompweb-tray` registers a StatusNotifierItem tray icon with a context
-menu: open the web UI, copy its URL, start/stop/restart the systemd service,
-view logs, expose the web UI to the network, change the port, set the web
-password, toggle autostart, and quit the tray.
+`ompweb-tray` registers a StatusNotifierItem menu for opening the UI and
+controlling the systemd user service. After installation, use:
 
 ```bash
-npx --yes @kahme247/ompweb@latest ompweb-tray --install      # Icons + autostart + start tray
-npx --yes @kahme247/ompweb@latest ompweb-tray --status       # Tray and service status
-npx --yes @kahme247/ompweb@latest ompweb-tray --uninstall    # Remove autostart, stop tray
+ompweb-tray --install
+ompweb-tray --status
+ompweb-tray --uninstall
 ```
 
-**Expose to Network** rebinds the service from `127.0.0.1` to `0.0.0.0` so the
-web UI is reachable from your LAN or VPN (e.g. Tailscale). Leaving loopback
-requires a web password — the tray prompts for one via `kdialog`/`zenity` when
-needed. **Change Port…** and **Set Web Password…** edit
-`~/.omp/agent/web-service.env` and restart the service. When binding to a
-non-loopback host, use HTTPS through a trusted reverse proxy or VPN for remote
-access.
-
-"Start with Plasma" in the tray menu toggles a desktop autostart entry at
-`~/.config/autostart/ompweb-tray.desktop`. Requires a running StatusNotifierItem
-host (KDE Plasma, and most Wayland/X11 desktops).
+Network exposure requires a web password and HTTPS through a trusted reverse
+proxy or VPN. Tray service settings remain in `~/.omp/agent/web-service.env`.
 
 ## Features
 
@@ -228,7 +160,7 @@ host (KDE Plasma, and most Wayland/X11 desktops).
 ## Development
 
 ```bash
-git clone https://github.com/kahme247/ompweb.git
+git clone https://github.com/vantran-se/ompweb.git
 cd ompweb
 npm install
 npm run dev

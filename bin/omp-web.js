@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getUnsupportedNodeVersionMessage, isNodeVersionSupported } = require("./node-version");
 
-if (!isNodeVersionSupported(process.versions.node)) {
-  console.error(getUnsupportedNodeVersionMessage(process.versions.node));
-  process.exit(1);
-}
-
-// Forward service subcommands from the main bin. This makes both
-// `npx @kahme247/ompweb@latest ompweb-launchd ...` and
-// `npx @kahme247/ompweb@latest ompweb-systemd ...` work without requiring
-// callers to know the path of the secondary executable.
+// Forward service subcommands from the main bin so installed and source
+// launchers expose the same service-management entry points.
 const forwardedServiceScripts = {
   launchd: "omp-web-launchd.js",
   "ompweb-launchd": "omp-web-launchd.js",
@@ -31,6 +22,13 @@ if (forwardedServiceScript) {
     process.exit(1);
   }
   process.exit(result.status ?? 1);
+}
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getUnsupportedNodeVersionMessage, isNodeVersionSupported } = require("./node-version");
+
+if (!isNodeVersionSupported(process.versions.node)) {
+  console.error(getUnsupportedNodeVersionMessage(process.versions.node));
+  process.exit(1);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

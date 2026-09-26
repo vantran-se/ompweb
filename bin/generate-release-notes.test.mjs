@@ -97,7 +97,7 @@ Older release notes.
       version: '0.4.0',
       commits,
       previousTag: 'v0.3.6',
-      repo: 'kahme247/ompweb',
+      repo: 'vantran-se/ompweb',
     });
 
     assert.match(notes, /## Highlights/);
@@ -107,6 +107,6 @@ Older release notes.
     assert.match(notes, /## Contributors/);
     assert.match(notes, /@alice/);
     assert.match(notes, /@bob/);
-    assert.match(notes, /npm install -g @kahme247\/ompweb@0\.4\.0/);
+    assert.match(notes, /github\.com\/vantran-se\/ompweb\/releases\/latest\/download\/install\.sh/);
   });
 });

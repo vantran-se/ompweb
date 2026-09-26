@@ -55,17 +55,20 @@ test("writeServiceEnv creates the parent directory and a private file", () => {
   }
 });
 
-test("buildUnit points at the generated env file and keeps runtime settings out of the unit", () => {
+test("buildUnit runs the launcher with Node and keeps runtime settings out of the unit", () => {
   const unit = buildUnit({
-    ompwebBin: "/usr/local/bin/ompweb",
-    env: { OMP_WEB_OMP_BIN: "/home/u/.bun/bin/omp" },
+    ompwebBin: "/home/u/.local/share/ompweb/current/bin/omp-web.js",
+    nodeBin: "/usr/bin/node",
+    env: { OMP_WEB_OMP_BIN: "/home/u/.bun/bin/omp", OMPWEB_INSTALL_ROOT: "/home/u/.local/share/ompweb" },
     home: "/home/u",
     envPath: "/home/u/.omp/agent/web-service.env",
   });
 
-  assert.match(unit, /ExecStart=\/usr\/local\/bin\/ompweb\n/);
+  assert.match(unit, /ExecStart=\/usr\/bin\/node \/home\/u\/\.local\/share\/ompweb\/current\/bin\/omp-web\.js\n/);
+  assert.match(unit, /Documentation=https:\/\/github\.com\/vantran-se\/ompweb#readme/);
   assert.match(unit, /WorkingDirectory=%h/);
   assert.match(unit, /EnvironmentFile=\/home\/u\/\.omp\/agent\/web-service\.env/);
+  assert.match(unit, /"OMPWEB_INSTALL_ROOT=\/home\/u\/\.local\/share\/ompweb"/);
   assert.doesNotMatch(unit, /PORT=/);
   assert.doesNotMatch(unit, /OMP_WEB_PASSWORD/);
   assert.match(unit, /Restart=on-failure/);
@@ -73,7 +76,20 @@ test("buildUnit points at the generated env file and keeps runtime settings out 
   assert.match(unit, /StartLimitBurst=5/);
   assert.match(unit, /WantedBy=default\.target/);
   if (process.platform === "linux") {
-    assert.match(unit, /"PATH=\/home\/u\/\.bun\/bin:\/usr\/local\/bin:.*\/usr\/bin:\/bin"/);
+    assert.match(unit, /"PATH=\/home\/u\/\.bun\/bin:\/home\/u\/\.local\/share\/ompweb\/current\/bin:/);
+    assert.match(unit, /:\/home\/u\/\.local\/bin:\/usr\/local\/bin:\/usr\/bin:\/bin"/);
+  }
+});
+
+test("resolveOmpwebBin keeps release services on the current symlink path", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "ompweb-release-"));
+  try {
+    const launcher = path.join(root, "current", "bin", "omp-web.js");
+    mkdirSync(path.dirname(launcher), { recursive: true });
+    writeFileSync(launcher, "#!/usr/bin/env node\n", { mode: 0o755 });
+    assert.equal(resolveOmpwebBin({ OMPWEB_INSTALL_ROOT: root, PATH: "" }), launcher);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 
