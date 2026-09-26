@@ -225,7 +225,7 @@ function SidebarPortalMenu({
   return createPortal(
     <div
       ref={menuRef}
-      onClickCapture={(event) => {
+      onClick={(event) => {
         const target = event.target;
         if (target instanceof Element && target.closest('[role="menuitem"]')) onClose();
       }}

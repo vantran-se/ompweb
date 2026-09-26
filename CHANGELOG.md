@@ -13,6 +13,10 @@ All notable changes to **omp-web** (`@vantran-se/ompweb`) are documented in this
 - Add versioned installations with an atomic `current` activation, retained previous release, and rollback-aware in-app updates sourced from GitHub Releases.
 - Raise the runtime requirement to Node.js 26. Bun remains optional for launching release builds; Next.js remains the application and server framework.
 
+### Fixed
+
+- Restore the left-sidebar **Delete session** and **Remove workspace** confirmations; selecting either portal-menu action no longer closes the newly opened dialog in the same click.
+
 ### Security
 
 - Validate release checksums and archive contents before extraction, use private same-filesystem staging, and fail closed on malformed release metadata or artifacts.
