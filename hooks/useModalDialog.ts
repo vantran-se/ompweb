@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 // Stack of open dialog containers; only the topmost one responds to Escape,
 // so a sub-dialog (e.g. the provider picker over the models config) closes
@@ -25,6 +25,8 @@ export interface ModalDialogOptions {
   onClose: () => void;
   /** Set false while the dialog markup is not yet mounted (e.g. portal target pending). */
   active?: boolean;
+  /** Called before an active dialog becomes hidden/inert, while focus is still observable. */
+  blurOnDeactivate?: boolean;
 }
 
 /**
@@ -34,10 +36,16 @@ export interface ModalDialogOptions {
  * container. Attach the returned ref to the dialog panel and give that
  * element tabIndex={-1} (plus role="dialog" / aria-modal / a label).
  */
-export function useModalDialog<T extends HTMLElement>({ onClose, active = true }: ModalDialogOptions) {
+export function useModalDialog<T extends HTMLElement>({ onClose, active = true, blurOnDeactivate = false }: ModalDialogOptions) {
   const containerRef = useRef<T | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  useLayoutEffect(() => {
+    if (!blurOnDeactivate || active) return;
+    const container = containerRef.current;
+    const focused = document.activeElement;
+    if (container && focused instanceof HTMLElement && container.contains(focused)) focused.blur();
+  }, [active, blurOnDeactivate]);
 
   useEffect(() => {
     if (!active) return;

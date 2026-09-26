@@ -4,7 +4,7 @@ All notable changes to **omp-web** (`@kahme247/ompweb`) are documented in this f
 
 ---
 
-## Unreleased
+## 0.5.1 - 2026-09-26
 
 ### Added
 
@@ -18,6 +18,8 @@ All notable changes to **omp-web** (`@kahme247/ompweb`) are documented in this f
 
 ### Fixes & Improvements
 
+- Refactor the shell, chat, composer, message rendering, Settings, session sidebar, and file panel into explicit controller and presentation boundaries; add shared responsive/geometry contracts, semantic UI primitives, a unified active-run rail, workspace-aware file tabs, and ownership-split global styles without changing OMP/RPC authority.
+- Preserve queued Settings edits across failed native saves and retry the newest snapshot without reloading over local state; improve Settings Escape draft/IME safety, field and alert accessibility, toast expansion keyboard access, and workspace-aware MCP search results.
 - Reduce mobile composer clutter by moving reasoning, fast mode, context, and dictation into More actions while keeping model and send controls immediately available.
 - Refine workspace navigation with a narrower mobile drawer, quieter hover-revealed desktop row actions, clearer action grouping, and a less prominent global New Session control.
 - Move the desktop new-session form toward the top of the available workspace to reduce unused space and improve scan flow.

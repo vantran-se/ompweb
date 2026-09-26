@@ -1,7 +1,7 @@
 "use client";
 import { registerAbortHandler } from "@/hooks/useKeyboardShortcuts";
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
-import { ArrowDown, ChevronDown, ChevronUp, Layers, Paperclip, Square } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers, Paperclip, Square } from "lucide-react";
 import type { AgentMessage, AssistantContentBlock, AssistantMessage, BashExecutionMessage, ExtensionUiRequest, SessionInfo, SessionTreeNode, ToolCallContent, ToolResultMessage } from "@/lib/types";
 import { translate, useI18n } from "@/lib/i18n";
 import { getDisplayableAssistantBlocks, splitFinalAssistantBlocks } from "@/lib/message-display";
@@ -11,11 +11,10 @@ import { MessageView } from "./MessageView";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ExtensionDialog } from "./ExtensionDialog";
 import { SubagentTranscriptDialog } from "./SubagentTranscriptDialog";
-import { ChatMinimap, useMessageRefs } from "./ChatMinimap";
+import { useMessageRefs } from "./ChatMinimap";
 import { ComposerPanels } from "./ComposerPanels";
-import OmpWebLogo from "./OmpWebLogo";
-import { CHAT_COLUMN_MAX_WIDTH, MINIMAP_WIDTH } from "@/lib/chat-layout";
 import { WorkspaceState } from "./AppShell-layout";
+import { ChatColumn, ChatOverlays, ComposerDock, EmptySessionSurface, TranscriptSurface } from "./chat/ChatLayout";
 import { useAgentSession, type AgentPhase, type NoticeItem, type SubagentInfo } from "@/hooks/useAgentSession";
 import { useAudio } from "@/hooks/useAudio";
 import { useSpeechSynthesis, SpeechSynthesisProvider } from "@/hooks/useSpeechSynthesis";
@@ -70,11 +69,6 @@ function phaseLabel(phase: AgentPhase): string {
   return translate("chatWindow.thinking");
 }
 
-const CHAT_COLUMN_PADDING = 16;
-// Symmetric centering halves maxWidth reduction across both sides; compensate
-// so the right clearance (padding + half-reduction) equals the minimap width.
-const MINIMAP_CLEARANCE = 2 * (MINIMAP_WIDTH - CHAT_COLUMN_PADDING);
-const CHAT_COLUMN_MAX_WIDTH_DESKTOP = `min(${CHAT_COLUMN_MAX_WIDTH}px, calc(100% - ${MINIMAP_CLEARANCE}px))`;
 // Trigger the next history page while the sentinel is still this far below
 // the top edge, so a normal upward scroll seamlessly continues into the newly
 // loaded messages. Triggering only at the very top made the load invisible:
@@ -1173,114 +1167,45 @@ export function ChatWindow({ session, newSessionCwd, newSessionWorkspace, toolCa
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {isDragOver && !sessionBusy && (
-        <div className="drop-zone-overlay pointer-events-none absolute inset-0 z-50 flex items-center justify-center backdrop-blur-[1px]">
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            {[0, 0.8, 1.6].map((delay) => (
-              <div
-                key={delay}
-                className="drop-ripple-ring absolute h-180 w-180 rounded-full border-[1.5px] border-solid"
-                style={{ transformOrigin: "center", animationDelay: `${delay}s` }}
-              />
-            ))}
-          </div>
-          <svg
-            width="280" height="280" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg"
-            className="drop-zone-illustration"
-          >
-            <rect x="28" y="44" width="84" height="60" rx="8" fill="color-mix(in srgb, var(--accent) 8%, transparent)" stroke="color-mix(in srgb, var(--accent) 50%, transparent)" strokeWidth="1.8"/>
-            <path d="M36 100 L54 72 L68 88 L80 74 L104 100Z" fill="color-mix(in srgb, var(--accent) 16%, transparent)" stroke="color-mix(in srgb, var(--accent) 40%, transparent)" strokeWidth="1.4" strokeLinejoin="round"/>
-            <circle cx="96" cy="58" r="8" fill="color-mix(in srgb, var(--accent) 22%, transparent)" stroke="color-mix(in srgb, var(--accent) 55%, transparent)" strokeWidth="1.6"/>
-            <g stroke="color-mix(in srgb, var(--accent) 45%, transparent)" strokeWidth="1.4" strokeLinecap="round">
-              <line x1="96" y1="46" x2="96" y2="43"/>
-              <line x1="96" y1="70" x2="96" y2="73"/>
-              <line x1="84" y1="58" x2="81" y2="58"/>
-              <line x1="108" y1="58" x2="111" y2="58"/>
-              <line x1="87.5" y1="49.5" x2="85.4" y2="47.4"/>
-              <line x1="104.5" y1="66.5" x2="106.6" y2="68.6"/>
-              <line x1="104.5" y1="49.5" x2="106.6" y2="47.4"/>
-              <line x1="87.5" y1="66.5" x2="85.4" y2="68.6"/>
-            </g>
-          </svg>
-        </div>
-      )}
-
-      <SubagentTranscriptDialog
-        subagent={selectedSubagent}
-        sessionId={session?.id ?? sessionIdRef.current ?? null}
-        transcriptVersion={selectedSubagent ? (subagentTranscriptVersions[selectedSubagent.id] ?? 0) : 0}
-        events={selectedSubagent ? (subagentEvents[selectedSubagent.id] ?? []) : undefined}
-        onClose={() => setSelectedSubagent(null)}
-      />
-
-      {extensionCustomUi && (
-        <ExtensionCustomPanel
-          request={extensionCustomUi}
-          onInput={sendExtensionCustomInput}
+      <ChatOverlays showDropZone={isDragOver && !sessionBusy}>
+        <SubagentTranscriptDialog
+          subagent={selectedSubagent}
+          sessionId={session?.id ?? sessionIdRef.current ?? null}
+          transcriptVersion={selectedSubagent ? (subagentTranscriptVersions[selectedSubagent.id] ?? 0) : 0}
+          events={selectedSubagent ? (subagentEvents[selectedSubagent.id] ?? []) : undefined}
+          onClose={() => setSelectedSubagent(null)}
         />
-      )}
+
+        {extensionCustomUi && (
+          <ExtensionCustomPanel request={extensionCustomUi} onInput={sendExtensionCustomInput} />
+        )}
+      </ChatOverlays>
+
+      
 
       {isEmptyNew ? (
-        <div className="relative flex flex-1 flex-col overflow-hidden">
-          <div className="empty-session-layout flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8" style={{ minHeight: 0 }}>
-          <div className="w-full" style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH }}>
-            <div
-               className="mb-3 empty-chat-brand"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                marginLeft: 8,
-                marginRight: 8,
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1, lineHeight: 1.4, overflow: "hidden" }}>
-                <OmpWebLogo size={26} />
-                <span className="omp-wordmark" style={{ fontSize: 18, color: "var(--text)", fontWeight: 600, letterSpacing: "0.02em", flexShrink: 0, whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>omp web</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  web <span style={{ color: "var(--text)" }}>v{process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"}</span>
-                </span>
-                <OmpRuntimeVersion />
-              </div>
-            </div>
-            <div className="empty-session-intro">
-              <h1 className="display-serif">{t("appShell.newSessionTitle")}</h1>
-              <p>{t("appShell.newSessionDescription")}</p>
-            </div>
-            <div style={{ padding: `0 ${CHAT_COLUMN_PADDING}px` }}>{newSessionWorkspace}</div>
-            <NoticeShelf notices={notices} onDismiss={dismissNotice} align="right" />
-            {chatInputElement}
-          </div>
-        </div>
-        </div>
+        <EmptySessionSurface
+          title={t("appShell.newSessionTitle")}
+          description={t("appShell.newSessionDescription")}
+          runtimeVersion={<OmpRuntimeVersion />}
+          workspace={newSessionWorkspace}
+          notices={<NoticeShelf notices={notices} onDismiss={dismissNotice} align="right" />}
+          composer={chatInputElement}
+        />
       ) : (
       <>
-      <div className="relative flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 0,
-            right: 0,
-            zIndex: 40,
-            padding: `0 ${CHAT_COLUMN_PADDING}px`,
-            pointerEvents: "none",
-          }}
-        >
-          <div style={{ maxWidth: isMobile ? CHAT_COLUMN_MAX_WIDTH : CHAT_COLUMN_MAX_WIDTH_DESKTOP, margin: "0 auto" }}>
-            <NoticeShelf notices={notices} onDismiss={dismissNotice} floating align="right" />
-          </div>
-        </div>
-        {/* Hide the Firefox scrollbar on desktop only: ChatMinimap provides the
-            position indicator there, but on mobile there is no minimap and
-            users need the scrollbar (Chrome's overlay scrollbar still shows). */}
-        <div ref={scrollContainerRef} data-selection-scope="chat" tabIndex={-1} role="log" aria-live={streamState.isStreaming ? "off" : "polite"} aria-busy={streamState.isStreaming || undefined} aria-relevant="additions text" aria-label={t("chatWindow.conversation")} className={`flex-1 overflow-y-auto pt-6` + (isMobile ? "" : " scrollbar-none [&::-webkit-scrollbar]:hidden")} style={{ minHeight: 0 }}>
-          <div style={{ padding: `0 ${CHAT_COLUMN_PADDING}px` }}>
-            <div style={{ maxWidth: isMobile ? CHAT_COLUMN_MAX_WIDTH : CHAT_COLUMN_MAX_WIDTH_DESKTOP, margin: "0 auto" }}>
+      <TranscriptSurface
+        isMobile={isMobile}
+        isStreaming={streamState.isStreaming}
+        label={t("chatWindow.conversation")}
+        scrollLabel={t("chatWindow.scrollToBottom")}
+        nearBottom={nearBottom}
+        notices={<NoticeShelf notices={notices} onDismiss={dismissNotice} floating align="right" />}
+        scrollContainerRef={scrollContainerRef}
+        messages={messages}
+        messageRefs={messageRefs}
+        onScrollToBottom={scrollToBottom}
+      >
               <ExtensionStatusBar statuses={extensionStatuses} />
               <ExtensionWidgets widgets={aboveEditorWidgets} />
 
@@ -1375,103 +1300,37 @@ export function ChatWindow({ session, newSessionCwd, newSessionWorkspace, toolCa
             )}
 
             <div ref={messagesEndRef} />
-            </div>
-          </div>
-        </div>
-        {!nearBottom && (
-          <button
-            type="button"
-            onClick={scrollToBottom}
-            title={t("chatWindow.scrollToBottom")}
-            aria-label={t("chatWindow.scrollToBottom")}
-            className="chat-scroll-bottom ui-focus-ring"
-            style={{ position: "absolute", right: isMobile ? 16 : 48, bottom: 16, zIndex: 35, display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, padding: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-control)", background: "var(--bg-panel)", color: "var(--text-muted)", cursor: "pointer", boxShadow: "var(--shadow-pop)" }}
-          >
-            <ArrowDown size={15} strokeWidth={1.8} aria-hidden="true" />
-          </button>
-        )}
-        {isMobile ? null : (
-          <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, zIndex: 30, display: "flex", alignItems: "center", pointerEvents: "none" }}>
-            <ChatMinimap
-              messages={messages}
-              scrollContainer={scrollContainerRef}
-              messageRefs={messageRefs}
-            />
-          </div>
-        )}
-      </div>
+      </TranscriptSurface>
 
-      {/* Minimized pill bar - shown when composer is collapsed */}
-      {composerMinimized && (
-        <MinimizedComposerBar
-          draftKey={session?.id ?? (newSessionCwd ? `new:${newSessionCwd}` : undefined)}
-          isStreaming={sessionBusy}
-          isCompacting={isCompacting}
-          statusText={composerStatusText}
-          expandRef={minimizedExpandRef}
-          onExpand={handleExpand}
-          onAbort={handleAbort}
-          onAbortCompaction={handleAbortCompaction}
-        />
-      )}
-
-      {/* Full composer - always mounted; hidden when minimized to preserve ref + state.
-          A flex column that may shrink: when the panels + widgets + input are
-          taller than the viewport (soft keyboard up, Tasks expanded), the
-          panels block below scrolls and the input stays reachable instead of
-          being clipped off the bottom. */}
-      <div className="relative" style={{ display: composerMinimized ? "none" : "flex", flexDirection: "column", minHeight: 0 }}>
-        {/* Minimize chevron above the composer area */}
-        <div style={{ padding: `0 ${CHAT_COLUMN_PADDING}px`, flexShrink: 0 }}>
-          <div style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH, margin: "0 auto", display: "flex", justifyContent: "center" }}>
-            <button
-              type="button"
-              onClick={handleMinimize}
-              title={t("chatWindow.minimizeComposer")}
-              aria-label={t("chatWindow.minimizeComposer")}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: 44, height: 24,
-                background: "none", border: "none",
-                color: "var(--text-dim)",
-                cursor: "pointer", padding: 0,
-                borderRadius: 4,
-                transition: "color var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm)",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-            >
-              <ChevronDown size={14} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
-        <div
-          style={{
-            padding: `0 ${CHAT_COLUMN_PADDING}px`,
-            minHeight: 0,
-            overflowY: "auto",
-          }}
-        >
-          <div style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH, margin: "0 auto" }}>
+      <ComposerDock
+        minimized={composerMinimized}
+        minimizedBar={(
+          <MinimizedComposerBar
+            draftKey={session?.id ?? (newSessionCwd ? `new:${newSessionCwd}` : undefined)}
+            isStreaming={sessionBusy}
+            isCompacting={isCompacting}
+            statusText={composerStatusText}
+            expandRef={minimizedExpandRef}
+            onExpand={handleExpand}
+            onAbort={handleAbort}
+            onAbortCompaction={handleAbortCompaction}
+          />
+        )}
+        minimizeLabel={t("chatWindow.minimizeComposer")}
+        onMinimize={handleMinimize}
+        panels={(
+          <>
             {extensionDialog && (
               <div style={{ marginBottom: 8 }}>
-                <ExtensionDialog
-                  request={extensionDialog}
-                  onRespond={respondToExtensionUi}
-                  attached
-                />
+                <ExtensionDialog request={extensionDialog} onRespond={respondToExtensionUi} attached />
               </div>
             )}
-            <ComposerPanels
-              todoPhases={todoPhases}
-              subagents={subagents}
-              onSelectSubagent={setSelectedSubagent}
-            />
+            <ComposerPanels todoPhases={todoPhases} subagents={subagents} onSelectSubagent={setSelectedSubagent} />
             <ExtensionWidgets widgets={belowEditorWidgets} />
-          </div>
-        </div>
-        {chatInputElement}
-      </div>
+          </>
+        )}
+        composer={chatInputElement}
+      />
       </>
       )}
       </div>
@@ -1817,8 +1676,7 @@ const MinimizedComposerBar = memo(function MinimizedComposerBar({ draftKey, isSt
   const draftText = summary?.text?.trim() || null;
   const hasAttachments = summary?.hasAttachments ?? false;
   return (
-    <div style={{ flexShrink: 0, padding: "4px 16px calc(6px + env(safe-area-inset-bottom))" }}>
-      <div style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH, margin: "0 auto" }}>
+    <ChatColumn style={{ flexShrink: 0, paddingTop: 4, paddingBottom: "calc(6px + env(safe-area-inset-bottom))" }}>
         <div
           style={{
             display: "flex",
@@ -1917,7 +1775,6 @@ const MinimizedComposerBar = memo(function MinimizedComposerBar({ draftKey, isSt
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </ChatColumn>
   );
 });

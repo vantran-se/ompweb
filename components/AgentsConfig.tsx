@@ -420,7 +420,7 @@ export function AgentsConfig({ cwd }: { cwd: string | null }) {
                       <Trash2 size={13} aria-hidden="true" /> {t("agentsConfig.remove")}
                     </button>
                   )}
-                  {message ? <Alert variant={message.toLowerCase().includes("fail") || message.toLowerCase().includes("error") ? "error" : "info"} description={message} onDismiss={() => setMessage(null)} /> : null}
+                  {message ? <Alert variant={message.toLowerCase().includes("fail") || message.toLowerCase().includes("error") ? "error" : "info"} description={message} onDismiss={() => setMessage(null)} dismissLabel={t("chatWindow.close")} /> : null}
                 </div>
                 <p style={{ margin: 0, fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}>{t("agentsConfig.atomicNotice")}</p>
               </div>

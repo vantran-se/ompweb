@@ -14,6 +14,7 @@ import { Toast } from "@base-ui/react/toast";
 import { AlertCircle, Check, Info, X } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useI18n } from "@/lib/i18n";
 import type React from "react";
 
 type ToastKind = "success" | "error" | "info";
@@ -78,12 +79,22 @@ const descriptionBaseStyle = {
 } as const;
 
 /** Inline styles for a clamped description: 2-line ellipsis when collapsed, full content when expanded. */
-export function clampDescriptionStyle(expanded: boolean): React.CSSProperties {
+export function clampDescriptionStyle(expanded: boolean, focused = false): React.CSSProperties {
   return {
     ...descriptionBaseStyle,
-    cursor: expanded ? "default" : "pointer",
+    width: "100%",
+    padding: 0,
+    border: 0,
+    borderRadius: "var(--radius-control)",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+    outline: "none",
+    boxShadow: focused ? "var(--focus-ring)" : "none",
     ...(expanded
       ? {}
       : {
@@ -102,21 +113,25 @@ export function clampDescriptionStyle(expanded: boolean): React.CSSProperties {
  */
 export function ClampedDescription({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(false);
+  const [focused, setFocused] = useState(false);
   return (
-    <span
-      onClick={() => setExpanded((v) => !v)}
+    <button
+      type="button"
+      onClick={() => setExpanded((value) => !value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       aria-expanded={expanded}
-      title={expanded ? undefined : "Click to expand"}
-      style={clampDescriptionStyle(expanded)}
+      style={clampDescriptionStyle(expanded, focused)}
     >
       {children}
-    </span>
+    </button>
   );
 }
 
 function Toaster() {
   const { toasts } = Toast.useToastManager<ToastData>();
   const isMobile = useIsMobile();
+  const { t: translate } = useI18n();
   // Clear the app chrome (topbar 36/44px + tab bar 36px) with a safe gap so
   // toasts never cover the header, tabs, or chat content.
   const topOffset = isMobile ? 88 : 80;
@@ -169,7 +184,7 @@ function Toaster() {
             </Toast.Content>
             <Toast.Close
               className="toast-close-button"
-              aria-label="Dismiss"
+              aria-label={translate("chatWindow.close")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

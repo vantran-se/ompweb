@@ -140,7 +140,7 @@ function ProjectRow({
     : tree;
 
   return (
-    <section className="sidebar-project" data-active={isActive ? "true" : "false"} style={{ marginBottom: 12 }}>
+    <section className="sidebar-project" data-active={isActive ? "true" : "false"} data-activity={hasActivity ? "true" : "false"} style={{ marginBottom: 12 }}>
       <ConfirmDialog
         open={confirmRemove}
         onOpenChange={setConfirmRemove}
@@ -419,7 +419,7 @@ function ProjectRow({
       {isActive && activeWorktreeSwitcher}
 
       {isExpanded && (
-        <div className="sidebar-project-sessions" style={{ margin: "2px 0 0" }}>
+        <div className="sidebar-project-sessions" style={{ margin: "3px 0 0 16px", paddingLeft: 7, borderLeft: "1px solid var(--border)" }}>
           {visibleRoots.length === 0 ? (
             <div style={{ padding: "6px 12px 8px 34px", color: "var(--text-dim)", fontSize: 11 }}>
               {t("projects.emptyProject")}
@@ -971,7 +971,10 @@ const SessionItem = memo(function SessionItem({
     <>
     <div
       className="session-item-row"
- onClick={confirmDelete || renaming ? undefined : onClick}
+      data-selected={isSelected ? "true" : "false"}
+      data-running={isRunning ? "true" : "false"}
+      data-unread={isUnread ? "true" : "false"}
+      onClick={confirmDelete || renaming ? undefined : onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onKeyDown={(event) => {

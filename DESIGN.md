@@ -198,6 +198,43 @@ Deploy the frontend and API support together; no native OMP upgrade is required.
 - Expensive rendering is deferred until needed; responsiveness and initial
   bundle size are part of the product contract.
 
+### Frontend ownership boundaries
+
+The browser UI keeps runtime state close to its authoritative owner and shares
+only presentation contracts:
+
+- `AppShell` owns destination selection, panel modality, and shell overlays;
+  typed shell components render the top bar and active destination.
+- `ChatWindow` owns `useAgentSession`, transcript reconciliation, history
+  anchoring, and composer lifetime. `components/chat/` contains layout-only
+  surfaces; it must not become a second session controller.
+- `ChatInput` owns drafts, IME, attachments, dictation, menus, and queued
+  actions. `components/chat-input/` renders those states and the unified live
+  run rail without inventing runtime state.
+- `MessageView` dispatches by message role. Streaming and tool presentation is
+  split under `components/message/` with memoization at live update boundaries.
+- `useSettingsController` owns native setting load/save serialization, updates,
+  and settings search. Tab modules under `components/settings/` are
+  presentation and domain panels.
+- `useSessionSidebarData` owns sidebar fetch/SSE/ETag sequencing and persisted
+  expansion state; sidebar components render chrome and rows.
+- File tabs retain their originating workspace and session identities. Inactive
+  Explorer, Git, and file views remain mounted only when required and must not
+  fetch or watch while inactive.
+
+Responsive JavaScript consumes `lib/responsive-contract.ts`: phone is
+`<= 640px`, compact overlay is `<= 1100px`, and desktop split begins at
+`1101px`. Viewport/layout conversions use `lib/ui-geometry.ts`; pointer and
+viewport measurements are viewport pixels and must be converted before writing
+layout-space CSS variables. `useViewportMetrics` is the single writer for
+viewport CSS metrics.
+
+Semantic controls and surfaces live in `components/ui/`. Overlay owners retain
+portal, modality, focus entry/return, Escape, and backdrop behavior; visual
+surface reuse must not create a second focus manager. Global styles are split
+by ownership under `app/styles/` and imported by `app/globals.css` in cascade
+order.
+
 ## Upstream and release strategy
 
 `agegr/pi-web` is the historical source and a useful source of UI ideas,

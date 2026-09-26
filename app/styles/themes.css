@@ -1,0 +1,755 @@
+@theme {
+  --color-bg: var(--bg);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-selected: var(--bg-selected);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-hover: var(--accent-hover);
+  --color-user-bg: var(--user-bg);
+  --color-tool-bg: var(--tool-bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-raised: var(--bg-raised);
+  --color-border-strong: var(--border-strong);
+  --font-mono-font: var(--font-mono);
+  --font-serif-display: var(--font-serif);
+}
+
+/* Warm-paper palette (light). All text/background pairs verified WCAG AA
+   (≥4.5:1 for small text) — measured values noted per token. */
+:root {
+  --bg: #FAF9F6;
+  --bg-panel: #F2F0EA;
+  --bg-hover: #EAE7DF;
+  --bg-selected: #E5E0D4;
+  --border: #E2DDD2;
+  /* 13.94:1 on --bg, 12.88:1 on --bg-panel */
+  --text: #2B2823;
+  /* 5.65:1 on --bg, 5.22:1 on --bg-panel, 4.81:1 on --bg-hover */
+  --text-muted: #69635A;
+  /* 5.58:1 on --bg, 5.15:1 on --bg-panel, 4.75:1 on --bg-hover (darker than
+     muted by design — mirrors the previous palette's dim<muted relationship) */
+  --text-dim: #6A6458;
+  /* Terracotta. 5.61:1 as link on --bg, 5.18:1 on --bg-panel, 5.08:1 on --user-bg */
+  --accent: #B03E22;
+  /* White-on-fill button: 5.90:1 (passes AA for small text) */
+  --accent-strong: #B03E22;
+  --accent-hover: #96331B;
+  --user-bg: #F5EDE1;
+  --tool-bg: #F6F3ED;
+  --bg-subtle: rgba(60,50,35,0.04);
+  --status-error: #B42318;
+  --status-success: #18794E;
+  --status-warning: #8A5A00;
+  --status-modified: #A87B1F;
+  --status-renamed: #2563EB;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+/* omp.sh midnight theme (dark). Pure-black terminal look with a magenta/cyan
+   dual accent, ported from https://omp.sh. Text/background pairs verified
+   WCAG AA (≥4.5:1 for small text) — measured values noted per token.
+   --text-dim is deliberately lighter than omp.sh's faint gray (which fails
+   on panels) to hold AA. */
+html.omp {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-panel: #0A0A0C;
+  --bg-hover: #141417;
+  --bg-selected: #1C1C21;
+  --border: #232329;
+  /* 19.26:1 on --bg, 18.14:1 on --bg-panel */
+  --text: #F5F5F5;
+  /* 12.76:1 on --bg, 12.02:1 on --bg-panel */
+  --text-muted: #C9C9D1;
+  /* 6.46:1 on --bg, 6.08:1 on --bg-panel */
+  --text-dim: #8E8E96;
+  /* Magenta link accent. 6.65:1 on --bg, 6.26:1 on --bg-panel */
+  --accent: #EC5BAB;
+  /* Deep-magenta fill. White-on-fill: 6.35:1 (passes AA for small text) */
+  --accent-strong: #AD2674;
+  /* Link hover. 8.81:1 on --bg */
+  --accent-hover: #F483BB;
+  /* Cyan secondary accent (focus rings, highlights). 12.76:1 on --bg */
+  --accent-2: #7DD7E8;
+  --user-bg: #171217;
+  --tool-bg: #101014;
+  --bg-subtle: rgba(255,255,255,0.04);
+  --status-error: #FF9B92;
+  --status-success: #7DD8A8;
+  --status-warning: #F0C36A;
+  --status-modified: #E0B24D;
+  --status-renamed: #7CA8FF;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* omp.sh dotted-grid canvas + magenta selection + cyan focus ring. */
+html.omp body {
+  background: conic-gradient(rgba(255,255,255,0.03) 90deg, transparent 90deg 180deg, rgba(255,255,255,0.03) 180deg 270deg, transparent 270deg) 0 0 / 2px 2px, #000000;
+}
+html.omp ::selection {
+  background: rgba(236,91,171,0.32);
+  color: var(--text);
+}
+html.omp :focus-visible {
+  outline-color: var(--accent-2);
+}
+
+/* omp.sh type voice: Geist for UI text, JetBrains Mono for code. Scoped to
+   the omp theme so the warm themes keep their system/serif identity. */
+html.omp,
+html.omp body {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+}
+html.omp {
+  --font-mono: var(--font-jb-mono), "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+/* omp.sh link sweep: underline draws itself left-to-right on hover/focus. */
+html.omp .markdown-body a {
+  text-decoration: none;
+  position: relative;
+}
+html.omp .markdown-body a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: 0;
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html.omp .markdown-body a:hover::after,
+html.omp .markdown-body a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* omp.sh sunray signature for the empty-state wordmark: a cyan→white sheen
+   that sweeps across every 9s. Static gradient text when reduced motion. */
+html.omp .omp-wordmark {
+  background: linear-gradient(105deg, var(--accent-2) 38%, var(--text) 50%, var(--accent-2) 62%);
+  background-position: 100% 0;
+  background-size: 320% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html.omp .omp-wordmark {
+    animation: omp-sunray-sweep 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+@keyframes omp-sunray-sweep {
+  0% { text-shadow: none; background-position: 100% 0; }
+  8% { text-shadow: 0 0 16px color-mix(in srgb, var(--accent-2) 65%, transparent); }
+  18%, to { text-shadow: none; background-position: 0 0; }
+}
+
+/* Warm-ember palette (dark). Same AA verification as light. */
+html.dark:not([data-theme]):not(.omp),
+html[data-theme="dark"],
+html.theme-dark {
+  --bg: #1B1916;
+  --bg-panel: #231F1B;
+  --bg-hover: #2B2721;
+  --bg-selected: #332E26;
+  --border: #38322B;
+  /* 14.10:1 on --bg, 13.16:1 on --bg-panel */
+  --text: #EBE6DC;
+  /* 6.38:1 on --bg, 5.95:1 on --bg-panel, 5.40:1 on --bg-hover */
+  --text-muted: #A39B8E;
+  /* 5.27:1 on --bg, 4.92:1 on --bg-panel */
+  --text-dim: #938C81;
+  /* Lifted terracotta for dark surfaces: 5.96:1 as link on --bg.
+     As a white-text button fill it would fail AA, so filled buttons use
+     --accent-strong below (same split as the previous palette). */
+  --accent: #E07B54;
+  /* White-on-fill: 4.56:1 (passes AA) */
+  --accent-strong: #C2542E;
+  --accent-hover: #E89371;
+  --user-bg: #2C2721;
+  --tool-bg: #26221D;
+  --bg-subtle: rgba(235,225,210,0.05);
+  --status-error: #FF8A80;
+  --status-success: #69D5A5;
+  --status-warning: #F0C36A;
+  --status-modified: #E0B24D;
+  --status-renamed: #7CA8FF;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+/* One Light palette. */
+html[data-theme="one-light"], html.theme-one-light {
+  color-scheme: light;
+  --bg: #FAFAFA;
+  --bg-panel: #F0F0F0;
+  --bg-hover: #E5E5E6;
+  --bg-selected: #DBDBDC;
+  --border: #DCDCDC;
+  --text: #383A42;
+  --text-muted: #696C77;
+  --text-dim: #63666F;
+  --accent: #2F65D9;
+  --accent-strong: #2F65D9;
+  --accent-hover: #1E4FB8;
+  --user-bg: #EEF3FE;
+  --tool-bg: #F2F4F8;
+  --bg-subtle: rgba(56,58,66,0.04);
+  --status-error: #E45649;
+  --status-success: #50A14F;
+  --status-warning: #C18401;
+  --status-modified: #986801;
+  --status-renamed: #4078F2;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+/* Catppuccin Latte palette. */
+html[data-theme="catppuccin-latte"], html.theme-catppuccin-latte {
+  color-scheme: light;
+  --bg: #EFF1F5;
+  --bg-panel: #E6E9EF;
+  --bg-hover: #DCE0E8;
+  --bg-selected: #CCD0DA;
+  --border: #BCC0CC;
+  --text: #4C4F69;
+  --text-muted: #65687E;
+  --text-dim: #5B5F72;
+  --accent: #1E66F5;
+  --accent-hover: #04A5E5;
+  --user-bg: #E4E8F8;
+  --tool-bg: #E6E9EF;
+  --bg-subtle: rgba(76,79,105,0.05);
+  --status-error: #D20F39;
+  --status-success: #40A02B;
+  --status-warning: #DF8E1D;
+  --status-modified: #FE640B;
+  --status-renamed: #1E66F5;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+/* Rosé Pine Dawn palette. */
+html[data-theme="rose-pine-dawn"], html.theme-rose-pine-dawn {
+  color-scheme: light;
+  --bg: #FAF4ED;
+  --bg-panel: #FFFAF3;
+  --bg-hover: #F2E9E1;
+  --bg-selected: #DFDAD9;
+  --border: #CECACD;
+  --text: #575279;
+  --text-muted: #6E6A86;
+  --text-dim: #645F78;
+  --accent: #286983;
+  --accent-strong: #286983;
+  --accent-hover: #1F5469;
+  --user-bg: #F5EDE8;
+  --tool-bg: #FFFBF5;
+  --bg-subtle: rgba(87,82,121,0.05);
+  --status-error: #B4637A;
+  --status-success: #286983;
+  --status-warning: #EA9D34;
+  --status-modified: #D7827E;
+  --status-renamed: #907AA9;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+/* Dracula palette. */
+html[data-theme="dracula"], html.theme-dracula {
+  color-scheme: dark;
+  --bg: #282A36;
+  --bg-panel: #21222C;
+  --bg-hover: #343746;
+  --bg-selected: #44475A;
+  --border: #44475A;
+  --text: #F8F8F2;
+  --text-muted: #B4B8D0;
+  --text-dim: #AEB5D0;
+  --accent: #FF79C6;
+  --accent-strong: #BD93F9;
+  --accent-hover: #FFA2D8;
+  --user-bg: #2E303E;
+  --tool-bg: #21222C;
+  --bg-subtle: rgba(248,248,242,0.05);
+  --status-error: #FF5555;
+  --status-success: #50FA7B;
+  --status-warning: #FFB86C;
+  --status-modified: #F1FA8C;
+  --status-renamed: #8BE9FD;
+  --on-accent: #282A36;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* Harbor palette. */
+html[data-theme="harbor"], html.theme-harbor {
+  color-scheme: dark;
+  --bg: #1B1B1B;
+  --bg-panel: #242424;
+  --bg-hover: #2E2E2E;
+  --bg-selected: #383838;
+  --border: #3D3D3D;
+  --text: #EFEBDC;
+  --text-muted: #C0B8A0;
+  --text-dim: #817F68;
+  --accent: #E75A50;
+  --accent-strong: #D2483E;
+  --accent-hover: #F0736A;
+  --user-bg: #262120;
+  --tool-bg: #202020;
+  --bg-subtle: rgba(239,235,220,0.05);
+  --status-error: #F44336;
+  --status-success: #77838A;
+  --status-warning: #E1CE98;
+  --status-modified: #DC8164;
+  --status-renamed: #E58980;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* One Dark Pro palette. */
+html[data-theme="one-dark-pro"], html.theme-one-dark-pro {
+  color-scheme: dark;
+  --bg: #282C34;
+  --bg-panel: #21252B;
+  --bg-hover: #2C313C;
+  --bg-selected: #3E4451;
+  --border: #3A3F4B;
+  --text: #ABB2BF;
+  --text-muted: #8B94A5;
+  --text-dim: #AAB2C0;
+  --accent: #61AFEF;
+  --accent-strong: #4D8CD6;
+  --accent-hover: #7EC7FF;
+  --user-bg: #232731;
+  --tool-bg: #1E2227;
+  --bg-subtle: rgba(171,178,191,0.05);
+  --status-error: #E06C75;
+  --status-success: #98C379;
+  --status-warning: #E5C07B;
+  --status-modified: #D19A66;
+  --status-renamed: #61AFEF;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Rosé Pine palette. */
+html[data-theme="rose-pine"], html.theme-rose-pine {
+  color-scheme: dark;
+  --bg: #191724;
+  --bg-panel: #1F1D2E;
+  --bg-hover: #26233A;
+  --bg-selected: #403D52;
+  --border: #393552;
+  --text: #E0DEF4;
+  --text-muted: #908CAA;
+  --text-dim: #6E6A86;
+  --accent: #EBBCBA;
+  --accent-strong: #C4A7E7;
+  --accent-hover: #F2CECC;
+  --user-bg: #232033;
+  --tool-bg: #1D1A2B;
+  --bg-subtle: rgba(224,222,244,0.05);
+  --status-error: #EB6F92;
+  --status-success: #9CCFD8;
+  --status-warning: #F6C177;
+  --status-modified: #EBBCBA;
+  --status-renamed: #C4A7E7;
+  --on-accent: #191724;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Catppuccin Mocha palette. */
+html[data-theme="catppuccin-mocha"], html.theme-catppuccin-mocha {
+  color-scheme: dark;
+  --bg: #1E1E2E;
+  --bg-panel: #181825;
+  --bg-hover: #262638;
+  --bg-selected: #313244;
+  --border: #45475A;
+  --text: #CDD6F4;
+  --text-muted: #A6ADC8;
+  --text-dim: #AAB2D0;
+  --accent: #CBA6F7;
+  --accent-strong: #B4BEFE;
+  --accent-hover: #D8BCF9;
+  --user-bg: #252438;
+  --tool-bg: #181825;
+  --bg-subtle: rgba(205,214,244,0.05);
+  --status-error: #F38BA8;
+  --status-success: #A6E3A1;
+  --status-warning: #F9E2AF;
+  --status-modified: #FAB387;
+  --status-renamed: #89B4FA;
+  --on-accent: #11111B;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Gruvbox Dark palette. */
+html[data-theme="gruvbox-dark"], html.theme-gruvbox-dark {
+  color-scheme: dark;
+  --bg: #282828;
+  --bg-panel: #1D2021;
+  --bg-hover: #32302F;
+  --bg-selected: #3C3836;
+  --border: #504945;
+  --text: #EBDBB2;
+  --text-muted: #BDAE93;
+  --text-dim: #928374;
+  --accent: #FE8019;
+  --accent-strong: #D65D0E;
+  --accent-hover: #FF9C42;
+  --user-bg: #322D29;
+  --tool-bg: #202020;
+  --bg-subtle: rgba(235,219,178,0.05);
+  --status-error: #FB4934;
+  --status-success: #B8BB26;
+  --status-warning: #FABD2F;
+  --status-modified: #D3869B;
+  --status-renamed: #83A598;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Nord palette. */
+html[data-theme="nord"], html.theme-nord {
+  color-scheme: dark;
+  --bg: #2E3440;
+  --bg-panel: #272C36;
+  --bg-hover: #3B4252;
+  --bg-selected: #434C5E;
+  --border: #4C566A;
+  --text: #ECEFF4;
+  --text-muted: #D8DEE9;
+  --text-dim: #8892B0;
+  --accent: #88C0D0;
+  --accent-strong: #5E81AC;
+  --accent-hover: #9BD6E6;
+  --user-bg: #343B4A;
+  --tool-bg: #262B35;
+  --bg-subtle: rgba(236,239,244,0.05);
+  --status-error: #BF616A;
+  --status-success: #A3BE8C;
+  --status-warning: #EBCB8B;
+  --status-modified: #D08770;
+  --status-renamed: #81A1C1;
+  --on-accent: #2E3440;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Tokyo Night palette. */
+html[data-theme="tokyo-night"], html.theme-tokyo-night {
+  color-scheme: dark;
+  --bg: #1A1B26;
+  --bg-panel: #16161E;
+  --bg-hover: #24283B;
+  --bg-selected: #283457;
+  --border: #2F354D;
+  --text: #C0CAF5;
+  --text-muted: #9AA5CE;
+  --text-dim: #AAB6E6;
+  --accent: #7AA2F7;
+  --accent-strong: #567ECC;
+  --accent-hover: #8DB4FF;
+  --user-bg: #222538;
+  --tool-bg: #161620;
+  --bg-subtle: rgba(192,202,245,0.05);
+  --status-error: #F7768E;
+  --status-success: #9ECE6A;
+  --status-warning: #E0AF68;
+  --status-modified: #FF9E64;
+  --status-renamed: #7DCFFF;
+  --on-accent: #FFFFFF;
+  --overlay-backdrop: color-mix(in srgb, var(--text) 24%, transparent);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-pop: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+}
+
+/* Shape / elevation / motion tokens. Surfaces are derived from each palette so
+   every bundled theme keeps its identity while sharing the same depth model. */
+:root {
+  --radius-control: 9px;
+  --radius-card: 14px;
+  --radius-modal: 20px;
+  --control-height-sm: 28px;
+  --control-height: 32px;
+  --control-height-lg: 36px;
+  --control-padding-inline: 10px;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+  --text-body: 12.5px;
+  --text-md-strong: 13.5px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --row-height-compact: 30px;
+  --tab-height: var(--control-height-lg);
+  --toolbar-control-height: var(--control-height-sm);
+  --icon-control-size-compact: 24px;
+  /* Recessed canvas, normal panel, and raised surface form the shared shell stack. */
+  --bg-canvas: color-mix(in srgb, var(--bg) 97%, #000 3%);
+  --bg-raised: color-mix(in srgb, var(--bg-panel) 95%, #fff 5%);
+  --border-subtle: color-mix(in srgb, var(--border) 72%, transparent);
+  --border-strong: color-mix(in srgb, var(--border) 68%, var(--text) 32%);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  /* Warm, multi-stage elevation remains legible without turning panels into cards. */
+  --shadow-card: 0 1px 2px rgba(60,50,35,0.08), 0 4px 12px rgba(60,50,35,0.07);
+  --shadow-pop: 0 2px 6px rgba(60,50,35,0.10), 0 12px 30px rgba(60,50,35,0.14);
+  --shadow-modal: 0 6px 18px rgba(60,50,35,0.12), 0 24px 64px rgba(60,50,35,0.20);
+  --ease-out-warm: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 130ms;
+  --dur-med: 200ms;
+  --dur-slow: 300ms;
+  --dur-theme: 420ms;
+}
+html.dark,
+html.omp {
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.42), 0 6px 16px rgba(0,0,0,0.20), 0 0 0 1px rgba(235,225,210,0.04);
+  --shadow-pop: 0 4px 12px rgba(0,0,0,0.48), 0 16px 36px rgba(0,0,0,0.28), 0 0 0 1px rgba(235,225,210,0.05);
+  --shadow-modal: 0 10px 28px rgba(0,0,0,0.58), 0 28px 72px rgba(0,0,0,0.38), 0 0 0 1px rgba(235,225,210,0.06);
+}
+
+/* Chat font size scaling tokens — kept in base layer so html[data-...] attribute selectors survive Tailwind's content scan. */
+@layer base {
+  :root {
+    --chat-font-size: 14px;
+    --chat-line-height: 1.7;
+    --chat-code-font-size: 12.5px;
+    --chat-user-font-size: 14px;
+  }
+  html[data-font-size="sm"] {
+    --chat-font-size: 13px;
+    --chat-line-height: 1.65;
+    --chat-code-font-size: 12px;
+    --chat-user-font-size: 13px;
+  }
+  html[data-font-size="md"] {
+    --chat-font-size: 14px;
+    --chat-line-height: 1.7;
+    --chat-code-font-size: 12.5px;
+    --chat-user-font-size: 14px;
+  }
+  html[data-font-size="lg"] {
+    --chat-font-size: 16px;
+    --chat-line-height: 1.7;
+    --chat-code-font-size: 14px;
+    --chat-user-font-size: 16px;
+  }
+  html[data-font-size="xl"] {
+    --chat-font-size: 18px;
+    --chat-line-height: 1.75;
+    --chat-code-font-size: 15.5px;
+    --chat-user-font-size: 18px;
+  }
+}
+
+/* iOS Safari / WKWebView zooms the page when an editable control with a computed
+   font-size below 16px gains focus. There is no user-facing toggle, and
+   `maximum-scale=1` has been ignored since iOS 17.4, so the reliable fix is to
+   floor form-control font size at 16px on small screens (see issue #87). */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* General UI scale. Chromium zoom multiplies the used box, so these rules also
+   shrink the layout box by --ui-scale and the painted result matches the viewport.
+   Do not add transform: scale() — it would double-scale on top of zoom.
+   Do not divide body: it is height 100% of html (including the inline style in layout.tsx).
+   Height on these layered rules loses to the unlayered html, body box below, so the
+   same box is repeated unlayered after that rule. Standard stays at zoom 1. */
+@layer base {
+  :root {
+    --ui-scale: 1;
+  }
+  html[data-ui-scale="compact"] {
+    --ui-scale: 0.9;
+    zoom: 0.9;
+    height: calc(100% / var(--ui-scale));
+    max-height: calc(100% / var(--ui-scale));
+    width: calc(100% / var(--ui-scale));
+    max-width: calc(100% / var(--ui-scale));
+  }
+  html[data-ui-scale="standard"] {
+    --ui-scale: 1;
+    zoom: 1;
+  }
+  html[data-ui-scale="comfortable"] {
+    --ui-scale: 1.1;
+    zoom: 1.1;
+    height: calc(100% / var(--ui-scale));
+    max-height: calc(100% / var(--ui-scale));
+    width: calc(100% / var(--ui-scale));
+    max-width: calc(100% / var(--ui-scale));
+  }
+  html[data-ui-scale="large"] {
+    --ui-scale: 1.2;
+    zoom: 1.2;
+    height: calc(100% / var(--ui-scale));
+    max-height: calc(100% / var(--ui-scale));
+    width: calc(100% / var(--ui-scale));
+    max-width: calc(100% / var(--ui-scale));
+  }
+}
+/* Theme toggle: circular wipe via View Transitions API.
+   Disable the UA cross-fade; the actual clip-path animation is driven by
+   Element.animate() in hooks/useTheme.ts after transition.ready resolves. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Respect prefers-reduced-motion via the media query at the bottom. */
+  scroll-behavior: smooth;
+  height: 100%;
+  overflow: hidden;
+}
+
+html, body {
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  overscroll-behavior: none;
+}
+
+/* Unlayered so this beats html, body { height/max-height: 100% }. The same
+   declarations inside @layer base do not. Do not also divide body. */
+html[data-ui-scale="compact"],
+html[data-ui-scale="comfortable"],
+html[data-ui-scale="large"] {
+  height: calc(100% / var(--ui-scale));
+  max-height: calc(100% / var(--ui-scale));
+  width: calc(100% / var(--ui-scale));
+  max-width: calc(100% / var(--ui-scale));
+}
+
+/* Root `zoom` with inverse percentage sizing is not viewport-safe in mobile
+   WebKit: the inverse width can remain observable while zoom is applied
+   inconsistently, narrowing the entire shell. Mobile already has dedicated
+   responsive sizing, so keep its layout at the native viewport scale. */
+@media (max-width: 640px) {
+  html[data-ui-scale="compact"],
+  html[data-ui-scale="comfortable"],
+  html[data-ui-scale="large"] {
+    --ui-scale: 1;
+    zoom: 1;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+}
+
+/* Thin custom scrollbars (WebKit/Blink). Firefox uses scrollbar-color below. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-dim) 45%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-dim) 75%, transparent);
+  background-clip: content-box;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-dim) 45%, transparent) transparent;
+}
+
+/* Keyboard focus ring that only shows for keyboard navigation, not mouse clicks.
+   Components set their own :focus-visible where a tighter ring is wanted. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Remove the default outline only when focus is NOT from the keyboard. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:root {
+  --font-mono: var(--font-noto-mono), 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace, 'PingFang SC', 'Microsoft YaHei', monospace;
+  /* Display serif for headings / session titles / modal titles / empty states.
+     Falls back to system serifs if the webfont fails. */
+  --font-serif: var(--font-source-serif), var(--font-noto-serif), Georgia, 'Songti SC', 'SimSun', serif;
+}
+
+pre, code {
+  font-family: var(--font-mono);
+}
+
+/* Serif display utility: opt-in via class on headings, titles, empty states. */
+.display-serif {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+

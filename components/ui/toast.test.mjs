@@ -12,21 +12,23 @@ const { ClampedDescription, clampDescriptionStyle } = await jiti.import("./toast
 
 const TOOL_LIST = "xd://: mounted mcp__ida_reverse_engineering_ida_address_context, mcp__ida_decompile";
 
-test("clamped description renders collapsed to 2 lines with an expand affordance", () => {
+test("clamped description is a keyboard-operable collapsed button", () => {
   const html = renderToStaticMarkup(React.createElement(ClampedDescription, null, TOOL_LIST));
 
   assert.match(html, new RegExp(TOOL_LIST.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(html, /<button[^>]*type="button"/);
   assert.match(html, /-webkit-line-clamp:2/);
   assert.match(html, /-webkit-box/);
   assert.match(html, /overflow:hidden/);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /cursor:pointer/);
-  assert.match(html, /Click to expand/);
+  assert.doesNotMatch(html, /title=/);
 });
 
-test("clamp style helper drops the clamp when expanded", () => {
+test("clamp style helper drops the clamp when expanded and exposes focus", () => {
   const collapsed = clampDescriptionStyle(false);
   const expanded = clampDescriptionStyle(true);
+  const focused = clampDescriptionStyle(false, true);
 
   assert.equal(collapsed.display, "-webkit-box");
   assert.equal(collapsed.WebkitLineClamp, 2);
@@ -36,5 +38,6 @@ test("clamp style helper drops the clamp when expanded", () => {
   assert.equal(expanded.display, undefined);
   assert.equal(expanded.WebkitLineClamp, undefined);
   assert.equal(expanded.overflow, undefined);
-  assert.equal(expanded.cursor, "default");
+  assert.equal(expanded.cursor, "pointer");
+  assert.equal(focused.boxShadow, "var(--focus-ring)");
 });

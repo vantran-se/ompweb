@@ -1,0 +1,1179 @@
+/* File viewer toolbar */
+.file-viewer-toolbar {
+  min-width: 0;
+  min-height: 35px;
+}
+
+.file-viewer-path {
+  flex: 1 1 auto;
+  min-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-viewer-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-viewer-live-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 7px;
+}
+
+.file-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.file-viewer-actions {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  gap: 4px;
+  flex-shrink: 0;
+  order: -1;
+}
+
+.file-viewer-mode-switch {
+  display: flex;
+  height: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.file-viewer-mode-button {
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.file-viewer-mode-button:first-child {
+  border-left: 0;
+}
+
+.file-viewer-mode-button:hover {
+  filter: brightness(1.08);
+}
+
+.file-viewer-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  box-sizing: border-box;
+  flex: 0 0 24px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.file-viewer-icon-button:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text);
+}
+
+.file-viewer-icon-button:disabled {
+  color: var(--text-dim);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.file-viewer-icon-button:disabled:hover {
+  background: transparent !important;
+  color: var(--text-dim);
+}
+
+.file-viewer-mode-button:focus-visible,
+.file-viewer-icon-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.directory-picker-path:focus-visible {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.directory-picker-entry:focus-visible,
+.directory-picker-back:focus-visible,
+.directory-picker-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Sidebar session rows: keyboard access */
+.session-item-button {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.session-item-button:focus-visible,
+.session-item-icon-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.session-item-trailing {
+  width: 68px;
+  gap: 2px;
+  height: 24px;
+}
+.session-item-metadata {
+  width: auto;
+}
+.session-item-time {
+  width: 42px;
+}
+.session-item-menu-button {
+  width: 24px;
+  height: 24px;
+}
+.sidebar-project-actions {
+  /* Two compact controls: per-workspace new session and overflow actions. */
+  width: 48px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-project-actions .sidebar-project-action,
+  .sidebar-project-toggle {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm);
+  }
+  .sidebar-project-header:hover .sidebar-project-action,
+  .sidebar-project-header:focus-within .sidebar-project-action,
+  .sidebar-project-header:hover .sidebar-project-toggle,
+  .sidebar-project-header:focus-within .sidebar-project-toggle {
+    opacity: 1;
+  }
+}
+.sidebar-project-action:hover,
+.sidebar-project-toggle:hover {
+  background: var(--bg-selected) !important;
+  color: var(--text) !important;
+}
+
+/* Touch rows keep the compact timestamp immediately beside a full-size menu target. */
+@media (hover: none), (pointer: coarse) {
+  .sidebar-project-actions {
+    width: 88px;
+  }
+  .sidebar-icon-button,
+  .sidebar-project-action,
+  .sidebar-project-toggle {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .sidebar-new-session {
+    height: 44px !important;
+  }
+  .sidebar-project-header {
+    height: 44px !important;
+  }
+  .sidebar-project-worktree button {
+    min-height: 40px;
+  }
+  .session-item-row {
+    min-height: 44px;
+  }
+  .session-item-trailing {
+    width: 78px;
+    height: 44px;
+  }
+  .session-item-time {
+    width: 32px;
+  }
+  .session-item-menu-button {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .session-item-row .session-item-button {
+    align-self: stretch;
+  }
+}
+
+.sidebar-project-header > button:focus-visible,
+.sidebar-project-identity:focus-visible,
+.sidebar-project-action:focus-visible,
+.sidebar-new-session:focus-visible,
+.sidebar-settings-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Sidebar overflow menus: compact items with a subtle warm hover highlight. */
+.sidebar-menu-item {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out-warm);
+}
+.sidebar-menu-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.sidebar-menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* Project navigation: give each workspace a quiet, tactile surface. The
+   indicator uses transform/opacity so active-session updates stay cheap. */
+.sidebar-project {
+  position: relative;
+  isolation: isolate;
+  transition: margin var(--dur-med) var(--ease-out-warm);
+}
+.sidebar-project-header {
+  position: relative;
+  z-index: 1;
+}
+.sidebar-project[data-active="true"] > .sidebar-project-header {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.sidebar-project-actions {
+  border-left: 1px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease-out-warm);
+}
+.sidebar-project-header:hover .sidebar-project-actions,
+.sidebar-project-header:focus-within .sidebar-project-actions {
+  border-left-color: color-mix(in srgb, var(--border) 72%, transparent);
+}
+.sidebar-project-worktree {
+  margin: 0 0 0 32px;
+  padding: 0 0 2px 6px;
+  animation: sidebar-worktree-in var(--dur-fast) var(--ease-out-warm) both;
+}
+.sidebar-project-worktree > div {
+  width: auto !important;
+  margin: 0 !important;
+}
+.sidebar-project-worktree button {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* New-session workspace picker: keep the destination legible without turning
+   it into a second prominent form. The folder badge and path provide a quiet
+   visual hierarchy while the native select preserves keyboard and platform
+   behavior. */
+.new-session-workspace {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+  transition: border-color var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm);
+}
+.new-session-workspace:hover {
+  border-color: color-mix(in srgb, var(--border) 72%, var(--accent));
+}
+.new-session-workspace-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.new-session-workspace-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  transition: border-color var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm), box-shadow var(--dur-fast) var(--ease-out-warm), transform var(--dur-fast) var(--ease-out-warm);
+}
+.new-session-workspace-control:hover {
+  background: var(--bg-hover);
+  border-color: color-mix(in srgb, var(--border) 62%, var(--accent));
+}
+.new-session-workspace-control:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.new-session-workspace-control:active {
+  transform: translateY(1px);
+}
+.new-session-workspace-icon {
+  position: absolute;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel));
+  color: var(--accent);
+  pointer-events: none;
+}
+.new-session-workspace-control select {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 42px 0 52px;
+  overflow: hidden;
+  border: 0;
+  outline: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.new-session-workspace-control select option {
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.new-session-workspace-chevron {
+  position: absolute;
+  right: 14px;
+  color: var(--text-dim);
+  pointer-events: none;
+  transition: color var(--dur-fast) var(--ease-out-warm), transform var(--dur-fast) var(--ease-out-warm);
+}
+.new-session-workspace-control:focus-within .new-session-workspace-chevron {
+  color: var(--accent);
+}
+.new-session-workspace-control:active .new-session-workspace-chevron {
+  transform: translateY(1px);
+}
+.new-session-workspace-path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .new-session-workspace {
+    margin-bottom: 14px;
+    padding: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .new-session-workspace,
+  .new-session-workspace-control,
+  .new-session-workspace-chevron {
+    transition: none;
+  }
+}
+@keyframes sidebar-worktree-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sidebar-project-sessions {
+  animation: sidebar-sessions-in var(--dur-med) var(--ease-out-warm) both;
+  transform-origin: top center;
+}
+@keyframes sidebar-sessions-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* The activity dot is part of the sidebar's shared right-edge status column
+   (see SessionSidebar-rows.tsx) — it must not move on hover. */
+.sidebar-project-activity[data-running="true"] .sidebar-project-activity-dot {
+  position: relative;
+  isolation: isolate;
+  animation: sidebar-activity-breathe 2.2s var(--ease-out-warm) infinite;
+  will-change: transform, opacity;
+}
+.sidebar-project-activity[data-running="true"] .sidebar-project-activity-dot::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+  border-radius: 50%;
+  animation: sidebar-activity-ring 2.2s var(--ease-out-warm) infinite;
+  pointer-events: none;
+}
+@keyframes sidebar-activity-breathe {
+  0%, 100% { opacity: 0.82; transform: scale(0.92); }
+  45% { opacity: 1; transform: scale(1); }
+}
+@keyframes sidebar-activity-ring {
+  0% { opacity: 0.7; transform: scale(0.9); }
+  70%, 100% { opacity: 0; transform: scale(2.15); }
+}
+.sidebar-running-spinner {
+  display: block;
+  box-sizing: border-box;
+  border: 1.7px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  border-radius: 50%;
+  animation: sidebar-running-spin 1.05s linear infinite;
+  will-change: transform;
+}
+@keyframes sidebar-running-spin {
+  to { transform: rotate(360deg); }
+}
+.sidebar-running-spinner[data-reduced-motion="true"] {
+  animation: none;
+}
+/* Shared full-panel loading, error, and empty states. The low-elevation
+   surface keeps status feedback clear without turning the workspace into a
+   collection of floating cards. */
+.workspace-state {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.workspace-state-surface {
+  display: flex;
+  width: min(100%, 440px);
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+.workspace-state-error .workspace-state-surface {
+  border-color: color-mix(in srgb, var(--status-error) 32%, var(--border));
+  background: color-mix(in srgb, var(--status-error) 5%, var(--bg-panel));
+}
+.workspace-state-icon {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+.workspace-state-error .workspace-state-icon {
+  color: var(--status-error);
+}
+.workspace-state-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.workspace-state-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.workspace-state-detail {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.workspace-state-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.workspace-state-skeleton {
+  display: grid;
+  flex: 0 0 34px;
+  gap: 4px;
+}
+.workspace-state-skeleton span {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+}
+.workspace-state-skeleton span:nth-child(1) { width: 100%; }
+.workspace-state-skeleton span:nth-child(2) { width: 72%; }
+.workspace-state-skeleton span:nth-child(3) { width: 44%; }
+
+
+.right-panel-header {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.right-panel-tabs {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.right-panel-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.right-panel-action-group {
+  display: flex;
+  align-items: center;
+}
+
+.right-panel-action-group + .right-panel-action-group {
+  margin-left: 2px;
+  padding-left: 3px;
+  border-left: 1px solid var(--border);
+}
+
+.right-panel-icon-action,
+.right-panel-text-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm);
+}
+
+.right-panel-icon-action {
+  width: 26px;
+}
+
+.right-panel-text-action {
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.right-panel-icon-action:hover:not(:disabled),
+.right-panel-text-action:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.right-panel-icon-action:disabled,
+.right-panel-text-action:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.right-panel-action-active {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.right-panel-action-primary {
+  color: var(--accent);
+}
+
+.right-panel-workspace {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 8px 4px;
+  padding: 5px 8px;
+  min-width: 0;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.right-panel-workspace-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.right-panel-workspace-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.right-panel-workspace-name,
+.right-panel-workspace-path {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-panel-workspace-name {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.right-panel-workspace-path {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.right-panel-repo-status {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+@media (max-width: 640px) {
+  .right-panel-header {
+    min-height: 44px;
+    padding-right: 44px;
+    flex-wrap: wrap;
+  }
+
+  .right-panel-tabs {
+    flex-basis: 100%;
+  }
+
+  .right-panel-tabs .tabbar-scroll,
+  .right-panel-tabs .tabbar-tab {
+    height: 44px !important;
+  }
+
+  .right-panel-actions button {
+    min-height: 44px;
+  }
+
+  .right-panel-icon-action {
+    min-width: 44px;
+  }
+}
+
+@media (min-width: 641px) {
+  .right-panel-header {
+    min-height: 36px;
+    padding-right: 36px;
+  }
+}
+
+@media (pointer: coarse) {
+  .right-panel-icon-action {
+    width: 44px;
+    height: 44px;
+  }
+
+  .right-panel-text-action {
+    min-height: 44px;
+    padding-inline: 10px;
+  }
+}
+
+/* Workspace file panel: a layered, durable editing surface rather than a
+   continuation of the chat canvas. */
+.right-panel-workspace-shell {
+  position: relative;
+  --panel-rail: color-mix(in srgb, var(--bg-panel) 88%, var(--bg));
+  --panel-canvas: color-mix(in srgb, var(--bg) 94%, var(--bg-subtle));
+  --panel-rule: color-mix(in srgb, var(--border) 78%, transparent);
+  background: var(--panel-canvas) !important;
+  box-shadow: -10px 0 30px color-mix(in srgb, #000 7%, transparent);
+}
+
+.right-panel-header {
+  min-width: 0;
+  min-height: 42px;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0 38px 0 8px;
+  background: var(--panel-rail);
+  border-bottom-color: var(--panel-rule);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.right-panel-tabs {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 180px;
+}
+
+.right-panel-tabs .tabbar-scroll {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 42px;
+  gap: 3px;
+  padding: 6px 2px 0;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  scrollbar-width: none;
+}
+
+.right-panel-tabs .tabbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.right-panel-tabs .tabbar-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 34px;
+  gap: 7px;
+  padding: 0 10px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  color: var(--text-muted);
+  background: transparent !important;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.right-panel-tabs .tabbar-destination {
+  min-width: 84px;
+}
+
+.right-panel-tabs .tabbar-file {
+  min-width: 92px;
+  max-width: 176px;
+  padding-right: 5px;
+}
+
+.right-panel-tabs .tabbar-tab:hover:not([aria-selected="true"]) {
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--bg-hover) 72%, transparent) !important;
+}
+
+.right-panel-tabs .tabbar-tab[aria-selected="true"] {
+  z-index: 1;
+  border-color: var(--panel-rule);
+  color: var(--text) !important;
+  background: var(--panel-canvas) !important;
+  box-shadow: 0 -2px 8px color-mix(in srgb, #000 5%, transparent);
+}
+
+.tabbar-active-marker {
+  position: absolute;
+  top: 0;
+  left: 9px;
+  right: 9px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleX(.45);
+  transition: opacity var(--dur-fast) var(--ease-out-warm), transform var(--dur-fast) var(--ease-out-warm);
+}
+
+.tabbar-tab[aria-selected="true"] .tabbar-active-marker {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.tabbar-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  color: var(--text-dim);
+}
+
+.tabbar-tab[aria-selected="true"] .tabbar-tab-icon,
+.tabbar-destination[aria-selected="true"] .tabbar-tab-icon {
+  color: var(--accent);
+}
+
+.tabbar-tab-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 520;
+}
+
+.tabbar-tab[aria-selected="true"] .tabbar-tab-label {
+  font-weight: 650;
+}
+
+.tabbar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--status-modified) 13%, var(--bg));
+  color: var(--status-modified);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.tabbar-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 1px;
+  padding: 0;
+  flex: 0 0 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.tabbar-close:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.right-panel-actions {
+  align-self: center;
+  height: 30px;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+}
+
+.right-panel-action-group + .right-panel-action-group {
+  margin-left: 1px;
+  padding-left: 2px;
+  border-left-color: var(--panel-rule);
+}
+
+.right-panel-icon-action,
+.right-panel-text-action {
+  height: 24px;
+  border-radius: 6px;
+}
+
+.right-panel-icon-action {
+  width: 24px;
+}
+
+.right-panel-action-primary {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.right-panel-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel-canvas);
+}
+
+.right-panel-view-body,
+.right-panel-file-slot {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.right-panel-workspace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 58px;
+  margin: 12px 12px 8px;
+  padding: 9px 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  border: 1px solid color-mix(in srgb, var(--border) 76%, var(--accent));
+  border-radius: 10px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--accent) 7%, var(--bg-panel)), var(--bg-panel) 50%);
+  box-shadow: 0 5px 14px color-mix(in srgb, #000 5%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.right-panel-workspace::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.right-panel-workspace-icon-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+
+.right-panel-workspace-icon {
+  color: var(--accent);
+}
+
+.right-panel-workspace-text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.right-panel-workspace-name,
+.right-panel-workspace-path {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-panel-workspace-name {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.right-panel-workspace-path {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.right-panel-repo-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 42%;
+  height: 22px;
+  gap: 5px;
+  padding: 0 7px;
+  flex: 0 0 auto;
+  border: 1px solid var(--panel-rule);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  color: var(--text-muted);
+}
+
+.right-panel-repo-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--status-success);
+}
+
+.right-panel-repo-status.is-changed .right-panel-repo-dot {
+  background: var(--status-modified);
+}
+
+.right-panel-git-view .git-refresh {
+  display: none !important;
+}
+
+.right-panel-repo-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* Calm, generous row rhythm inside the existing virtualized Explorer and Git
+   list. Heights stay data-driven; only the row surfaces and framing change. */
+.right-panel-explorer-view .right-panel-view-body,
+.right-panel-git-view > div:last-child {
+  margin: 0 8px 8px;
+  border: 1px solid var(--panel-rule);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.right-panel-explorer-view [role="tree"] {
+  padding: 6px !important;
+  background: transparent;
+}
+
+.right-panel-explorer-view [role="treeitem"],
+.right-panel-git-view .git-change-row {
+  border-radius: 6px !important;
+}
+
+.right-panel-explorer-view [role="treeitem"][aria-current="true"],
+.right-panel-git-view .git-change-row[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-selected)) !important;
+  box-shadow: inset 3px 0 0 var(--accent) !important;
+}
+
+.right-panel-explorer-view .file-explorer-search-input,
+.right-panel-git-view input[aria-label] {
+  height: 32px !important;
+  border-radius: 7px !important;
+  background: var(--bg) !important;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #000 4%, transparent);
+}
+
+.right-panel-file-view .file-viewer-shell {
+  margin: 0 8px 8px;
+  height: calc(100% - 8px) !important;
+  border: 1px solid var(--panel-rule);
+  border-radius: 9px;
+  background: var(--bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.right-panel-file-view .file-viewer-toolbar {
+  min-height: 40px;
+  padding-inline: 10px !important;
+  background: color-mix(in srgb, var(--bg-panel) 84%, var(--bg)) !important;
+}
+
+@media (max-width: 640px) {
+  .right-panel-header {
+    min-height: 52px;
+    padding: 0 48px 6px 6px;
+    flex-wrap: wrap;
+  }
+
+  .right-panel-tabs {
+    min-width: 0;
+    flex: 1 0 100%;
+  }
+
+  .right-panel-tabs .tabbar-scroll {
+    height: 52px !important;
+    padding-top: 8px;
+  }
+
+  .right-panel-tabs .tabbar-tab {
+    height: 44px !important;
+    min-width: 92px;
+  }
+
+  .right-panel-tabs .tabbar-file {
+    max-width: 154px;
+  }
+
+  .tabbar-close {
+    width: 44px;
+    height: 44px;
+    margin-right: -6px;
+    flex-basis: 44px;
+  }
+
+  .right-panel-actions {
+    position: static;
+    z-index: 3;
+    height: 44px;
+    margin: 4px 0 0 auto;
+    padding: 0;
+    border-radius: 9px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .right-panel-actions button,
+  .right-panel-icon-action,
+  .right-panel-text-action {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .right-panel-workspace {
+    margin: 10px 8px 8px;
+    min-height: 62px;
+  }
+
+  .right-panel-repo-label {
+    display: none;
+  }
+
+  .right-panel-repo-status {
+    width: 22px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .right-panel-explorer-view .right-panel-view-body,
+  .right-panel-git-view > div:last-child,
+  .right-panel-file-view .file-viewer-shell {
+    margin-inline: 6px;
+  }
+}
+
+@media (pointer: coarse) {
+  .right-panel-tabs .tabbar-tab {
+    min-height: 44px;
+  }
+
+  .tabbar-close {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabbar-active-marker {
+    transition: none;
+  }
+}

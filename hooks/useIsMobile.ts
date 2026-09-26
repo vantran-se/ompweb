@@ -1,20 +1,18 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-
-// Mobile breakpoint shared with app/globals.css (max-width: 640px).
-const MOBILE_QUERY = "(max-width: 640px)";
+import { PHONE_QUERY } from "@/lib/responsive-contract";
 
 function subscribe(cb: () => void): () => void {
   if (typeof window === "undefined" || !window.matchMedia) return () => {};
-  const mql = window.matchMedia(MOBILE_QUERY);
+  const mql = window.matchMedia(PHONE_QUERY);
   mql.addEventListener("change", cb);
   return () => mql.removeEventListener("change", cb);
 }
 
 function getSnapshot(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
-  return window.matchMedia(MOBILE_QUERY).matches;
+  return window.matchMedia(PHONE_QUERY).matches;
 }
 
 function getServerSnapshot(): boolean {

@@ -18,12 +18,15 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type InputHTMLAttributes,
   type KeyboardEventHandler,
   type ReactElement,
   type ReactNode,
+  type SelectHTMLAttributes,
 } from "react";
 import { AlertCircle, Check as CheckIcon, Eye, EyeOff, Info, TriangleAlert, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/semantic";
 
 /* ────────────────────────── Field wrapper ────────────────────────── */
 
@@ -39,21 +42,29 @@ interface FieldProps {
   id?: string;
 }
 
+type FieldChildProps = {
+  id?: string;
+  required?: boolean;
+  "aria-required"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
+};
+
 export function Field({ label, hint, error, required, children, style, id }: FieldProps) {
   const autoId = useId();
-  const childId = isValidElement(children) ? (children.props as { id?: string }).id : undefined;
+  const child = isValidElement<FieldChildProps>(children) ? children : null;
+  const childId = child?.props.id;
   const fieldId = id || childId || autoId;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = !error && hint ? `${fieldId}-hint` : undefined;
-  const describedBy = errorId || hintId;
+  const describedBy = [child?.props["aria-describedby"], errorId || hintId].filter(Boolean).join(" ") || undefined;
 
-  let enhancedChildren = children;
-  if (isValidElement(children)) {
-    enhancedChildren = cloneElement(children as ReactElement<{ id?: string; "aria-describedby"?: string }>, {
-      id: childId || fieldId,
-      "aria-describedby": (children.props as { "aria-describedby"?: string })["aria-describedby"] || describedBy,
-    });
-  }
+  const enhancedChildren = child
+    ? cloneElement(child, {
+        id: childId || fieldId,
+        "aria-describedby": describedBy,
+        ...(required ? { required: true, "aria-required": true } : {}),
+      })
+    : children;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, ...style }}>
@@ -105,19 +116,21 @@ function FieldError({ children, id }: { children: ReactNode; id?: string }) {
 
 export type AlertVariant = "success" | "error" | "warning" | "info";
 
+type AlertProps = {
+  variant?: AlertVariant;
+  title?: ReactNode;
+  description: ReactNode;
+  style?: CSSProperties;
+} & ({ onDismiss: () => void; dismissLabel: string } | { onDismiss?: undefined; dismissLabel?: never });
+
 export function Alert({
   variant = "info",
   title,
   description,
   onDismiss,
+  dismissLabel,
   style,
-}: {
-  variant?: AlertVariant;
-  title?: ReactNode;
-  description: ReactNode;
-  onDismiss?: () => void;
-  style?: CSSProperties;
-}) {
+}: AlertProps) {
   const isError = variant === "error";
   const isWarning = variant === "warning";
   const Icon = isError ? AlertCircle : variant === "success" ? CheckIcon : isWarning ? TriangleAlert : Info;
@@ -156,7 +169,7 @@ export function Alert({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={dismissLabel}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -254,7 +267,7 @@ function focusGlowStyle(focused: boolean, invalid: boolean): CSSProperties {
 
 /* ─── Text input ─── */
 
-interface TextInputProps {
+interface TextInputProps extends Pick<InputHTMLAttributes<HTMLInputElement>, "aria-describedby" | "aria-label" | "aria-labelledby" | "aria-required" | "required"> {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -282,6 +295,7 @@ export function TextInput({
   autoComplete,
   spellCheck,
   id,
+  ...ariaProps
 }: TextInputProps) {
   const [focused, setFocused] = useState(false);
   const isInvalid = Boolean(invalid || error);
@@ -296,6 +310,7 @@ export function TextInput({
       autoComplete={autoComplete}
       spellCheck={spellCheck}
       aria-invalid={isInvalid || undefined}
+      {...ariaProps}
       onFocus={() => setFocused(true)}
       onBlur={() => {
         setFocused(false);
@@ -313,7 +328,7 @@ export function TextInput({
 
 /* ─── Number input ─── */
 
-interface NumInputProps {
+interface NumInputProps extends Pick<InputHTMLAttributes<HTMLInputElement>, "aria-describedby" | "aria-label" | "aria-labelledby" | "aria-required" | "required"> {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -333,6 +348,7 @@ export function NumInput({
   onBlurValidate,
   disabled,
   id,
+  ...ariaProps
 }: NumInputProps) {
   const [focused, setFocused] = useState(false);
   const isInvalid = Boolean(invalid || error);
@@ -345,6 +361,7 @@ export function NumInput({
       placeholder={placeholder}
       disabled={disabled}
       aria-invalid={isInvalid || undefined}
+      {...ariaProps}
       onFocus={() => setFocused(true)}
       onBlur={() => {
         setFocused(false);
@@ -361,7 +378,7 @@ export function NumInput({
 
 /* ─── Secret (password) input with show / hide ─── */
 
-interface SecretInputProps {
+interface SecretInputProps extends Pick<InputHTMLAttributes<HTMLInputElement>, "aria-describedby" | "aria-label" | "aria-labelledby" | "aria-required" | "required"> {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -385,6 +402,7 @@ export function SecretInput({
   showLabel,
   hideLabel,
   id,
+  ...ariaProps
 }: SecretInputProps) {
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -406,6 +424,7 @@ export function SecretInput({
         autoComplete="off"
         spellCheck={false}
         aria-invalid={isInvalid || undefined}
+        {...ariaProps}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false);
@@ -450,7 +469,7 @@ export function SecretInput({
 
 /* ─── Select ─── */
 
-interface SelectProps {
+interface SelectProps extends Pick<SelectHTMLAttributes<HTMLSelectElement>, "aria-describedby" | "aria-label" | "aria-labelledby" | "aria-required"> {
   value: string;
   onChange: (v: string) => void;
   options: readonly string[];
@@ -472,6 +491,7 @@ export function Select({
   error,
   disabled,
   id,
+  ...ariaProps
 }: SelectProps) {
   const [focused, setFocused] = useState(false);
   const isInvalid = Boolean(invalid || error);
@@ -483,6 +503,8 @@ export function Select({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       aria-invalid={isInvalid || undefined}
+      required={required}
+      {...ariaProps}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={{
@@ -632,48 +654,23 @@ export function ConfirmDialog({
           </p>
         )}
         <div className="dialog-actions" style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexShrink: 0, paddingTop: 4 }}>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             className="dialog-action"
             onClick={() => onOpenChange(false)}
-            style={{
-              padding: "6px 14px",
-              background: "none",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-control)",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              fontSize: 13,
-            }}
+            style={{ paddingInline: 14, fontSize: 13 }}
           >
             {cancelLabel ?? "Cancel"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={danger ? "danger" : "primary"}
             className="dialog-action"
             disabled={busy}
             onClick={onConfirm}
-            style={{
-              padding: "6px 14px",
-              background: danger ? "var(--status-error)" : "var(--accent-strong)",
-              border: "none",
-              borderRadius: "var(--radius-control)",
-              color: "var(--on-accent)",
-              cursor: busy ? "wait" : "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              opacity: busy ? 0.7 : 1,
-              transition: "background var(--dur-fast) var(--ease-out-warm)",
-            }}
-            onMouseEnter={(e) => {
-              if (!busy) e.currentTarget.style.background = danger ? "color-mix(in srgb, var(--status-error) 82%, black)" : "var(--accent-hover)";
-            }}
-            onMouseLeave={(e) => {
-              if (!busy) e.currentTarget.style.background = danger ? "var(--status-error)" : "var(--accent-strong)";
-            }}
+            style={{ paddingInline: 14, fontSize: 13, cursor: busy ? "wait" : undefined }}
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

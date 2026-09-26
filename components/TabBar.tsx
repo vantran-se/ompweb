@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { Folder, GitBranch, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { getFileIcon } from "./FileIcons";
@@ -10,6 +10,7 @@ export interface Tab {
   label: string;
   filePath: string;
   sourceSessionId?: string | null;
+  sourceCwd?: string | null;
 }
 
 interface Props {
@@ -31,7 +32,6 @@ interface Props {
 
 export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSelected = false, onSelectExplorer, explorerBadge = 0, gitSelected = false, onSelectGit, gitBadge = 0 }: Props) {
   const { t } = useI18n();
-  const [hoveredClose, setHoveredClose] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const orderedTabIds = [
     ...(onSelectExplorer ? ["explorer"] : []),
@@ -104,19 +104,11 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
       aria-label={t("appShell.filePanel")}
       aria-orientation="horizontal"
       className="tabbar-scroll"
-      style={{
-        display: "flex",
-        alignItems: "flex-end",
-        background: "var(--bg-panel)",
-        overflowX: "auto",
-        flexShrink: 0,
-        height: "var(--tab-height)",
-      }}
     >
       {onSelectExplorer && (
         <div
           data-tab-id="explorer"
-          className="tabbar-tab ui-focus-ring"
+          className="tabbar-tab tabbar-destination ui-focus-ring"
           onClick={onSelectExplorer}
           role="tab"
           tabIndex={explorerSelected ? 0 : -1}
@@ -125,62 +117,15 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
           aria-controls="workspace-file-panel-explorer"
           title={explorerBadge > 0 ? t("sessionSidebar.explorerChanged", { count: explorerBadge }) : t("sessionSidebar.explorer")}
           onKeyDown={(event) => handleTabKeyDown(event, "explorer")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            height: "var(--tab-height)",
-            paddingLeft: 12,
-            paddingRight: 10,
-            borderRight: "1px solid var(--border)",
-            background: explorerSelected ? "var(--bg)" : "var(--bg-panel)",
-            cursor: "pointer",
-            fontSize: "var(--text-sm)",
-            color: explorerSelected ? "var(--text)" : "var(--text-muted)",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            userSelect: "none",
-            position: "relative",
-            transition: `background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm)`,
-          }}
+          data-kind="explorer"
         >
-          {explorerSelected && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 2,
-                background: "var(--accent)",
-                borderTopLeftRadius: "var(--radius-control)",
-                borderTopRightRadius: "var(--radius-control)",
-              }}
-            />
-          )}
-          <span style={{ flexShrink: 0, opacity: explorerSelected ? 1 : 0.7, display: "flex", alignItems: "center", color: explorerSelected ? "var(--accent)" : undefined }}>
-            <Folder size={13} strokeWidth={2} aria-hidden="true" />
+          <span className="tabbar-active-marker" aria-hidden="true" />
+          <span className="tabbar-tab-icon" aria-hidden="true">
+            <Folder size={14} strokeWidth={2} />
           </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", fontWeight: explorerSelected ? 500 : 400 }}>
-            {t("sessionSidebar.explorer")}
-          </span>
+          <span className="tabbar-tab-label">{t("sessionSidebar.explorer")}</span>
           {explorerBadge > 0 && (
-            <span
-              aria-hidden="true"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minWidth: 16,
-                height: 15,
-                padding: "0 4px",
-                borderRadius: 8,
-                background: "color-mix(in srgb, var(--status-modified) 18%, transparent)",
-                color: "var(--status-modified)",
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
+            <span className="tabbar-badge" aria-hidden="true">
               {explorerBadge > 99 ? "99+" : explorerBadge}
             </span>
           )}
@@ -189,7 +134,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
       {onSelectGit && (
         <div
           data-tab-id="git"
-          className="tabbar-tab ui-focus-ring"
+          className="tabbar-tab tabbar-destination ui-focus-ring"
           onClick={onSelectGit}
           role="tab"
           tabIndex={gitSelected ? 0 : -1}
@@ -198,62 +143,15 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
           aria-controls="workspace-file-panel-git"
           title={gitBadge > 0 ? t("sessionSidebar.explorerChanged", { count: gitBadge }) : t("tabBar.git")}
           onKeyDown={(event) => handleTabKeyDown(event, "git")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            height: "var(--tab-height)",
-            paddingLeft: 12,
-            paddingRight: 10,
-            borderRight: "1px solid var(--border)",
-            background: gitSelected ? "var(--bg)" : "var(--bg-panel)",
-            cursor: "pointer",
-            fontSize: "var(--text-sm)",
-            color: gitSelected ? "var(--text)" : "var(--text-muted)",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            userSelect: "none",
-            position: "relative",
-            transition: `background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm)`,
-          }}
+          data-kind="git"
         >
-          {gitSelected && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 2,
-                background: "var(--accent)",
-                borderTopLeftRadius: "var(--radius-control)",
-                borderTopRightRadius: "var(--radius-control)",
-              }}
-            />
-          )}
-          <span style={{ flexShrink: 0, opacity: gitSelected ? 1 : 0.7, display: "flex", alignItems: "center", color: gitSelected ? "var(--accent)" : undefined }}>
-            <GitBranch size={13} strokeWidth={2} aria-hidden="true" />
+          <span className="tabbar-active-marker" aria-hidden="true" />
+          <span className="tabbar-tab-icon" aria-hidden="true">
+            <GitBranch size={14} strokeWidth={2} />
           </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", fontWeight: gitSelected ? 500 : 400 }}>
-            {t("tabBar.git")}
-          </span>
+          <span className="tabbar-tab-label">{t("tabBar.git")}</span>
           {gitBadge > 0 && (
-            <span
-              aria-hidden="true"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minWidth: 16,
-                height: 15,
-                padding: "0 4px",
-                borderRadius: 8,
-                background: "color-mix(in srgb, var(--status-modified) 18%, transparent)",
-                color: "var(--status-modified)",
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
+            <span className="tabbar-badge" aria-hidden="true">
               {gitBadge > 99 ? "99+" : gitBadge}
             </span>
           )}
@@ -265,7 +163,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
           <div
             key={tab.id}
             data-tab-id={tab.id}
-            className="tabbar-tab ui-focus-ring"
+            className="tabbar-tab tabbar-file ui-focus-ring"
             onClick={() => onSelectTab(tab.id)}
             role="tab"
             tabIndex={isActive ? 0 : -1}
@@ -282,79 +180,22 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, explorerSel
               e.stopPropagation();
               onCloseTab(tab.id);
             }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              height: "var(--tab-height)",
-              paddingLeft: 12,
-              paddingRight: 6,
-              borderRight: "1px solid var(--border)",
-              background: isActive ? "var(--bg)" : "var(--bg-panel)",
-              cursor: "pointer",
-              fontSize: "var(--text-sm)",
-              color: isActive ? "var(--text)" : "var(--text-muted)",
-              whiteSpace: "nowrap",
-              maxWidth: 180,
-              minWidth: 80,
-              flexShrink: 0,
-              userSelect: "none",
-              position: "relative",
-              transition: `background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm)`,
-            }}
           >
-            {isActive && (
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 2,
-                  background: "var(--accent)",
-                  borderTopLeftRadius: "var(--radius-control)",
-                  borderTopRightRadius: "var(--radius-control)",
-                }}
-              />
-            )}
-            <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7, display: "flex", alignItems: "center" }}>
-              {getFileIcon(tab.label, 13)}
+            <span className="tabbar-active-marker" aria-hidden="true" />
+            <span className="tabbar-tab-icon" aria-hidden="true">
+              {getFileIcon(tab.label, 14)}
             </span>
-            <span
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                flex: 1,
-                fontWeight: isActive ? 500 : 400,
-              }}
-              title={tab.filePath}
-            >
-              {tab.label}
-            </span>
+            <span className="tabbar-tab-label" title={tab.filePath}>{tab.label}</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onCloseTab(tab.id); }}
               tabIndex={isActive ? 0 : -1}
               onKeyDown={(event) => event.stopPropagation()}
-              onMouseEnter={() => setHoveredClose(tab.id)}
-              onMouseLeave={() => setHoveredClose(null)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: "var(--icon-control-size-compact)", height: "var(--icon-control-size-compact)",
-                background: hoveredClose === tab.id ? "var(--bg-hover)" : "transparent",
-                border: "none",
-                borderRadius: "var(--radius-control)",
-                color: hoveredClose === tab.id ? "var(--text)" : "var(--text-dim)",
-                cursor: "pointer",
-                padding: 0,
-                flexShrink: 0,
-                transition: `background var(--dur-fast) var(--ease-out-warm), color var(--dur-fast) var(--ease-out-warm)`,
-              }}
+              className="tabbar-close"
               title={t("tabBar.close")}
               aria-label={t("tabBar.closeTab", { label: tab.label })}
             >
-              <X size={11} strokeWidth={2} aria-hidden="true" />
+              <X size={12} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
         );

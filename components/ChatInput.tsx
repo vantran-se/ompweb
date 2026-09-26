@@ -42,7 +42,7 @@ import {
   type ModelOption,
 } from "./ChatInput-model-options";
 import { ModelPickerPanel } from "./ChatInput-model-picker";
-import { ComposerModeStatus, ModelErrorBanner, QueuedActionButton } from "./ChatInput-banners";
+import { ComposerModeStatus, ModelErrorBanner } from "./ChatInput-banners";
 import { CHAT_COLUMN_MAX_WIDTH } from "@/lib/chat-layout";
 import {
   composeMessageWithTextAttachments,
@@ -65,6 +65,9 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useI18n } from "@/lib/i18n";
 import { selectableThinkingLevels } from "@/lib/thinking-levels";
 import type { ToolPreset } from "@/lib/tool-presets";
+import { AttachmentPreviews } from "./chat-input/AttachmentPreviews";
+import { ActiveRunRail } from "./chat-input/ActiveRunRail";
+import { ComposerShell, ComposerToolbar, MenuSurface } from "./chat-input/ComposerShell";
 
 export type { AttachedImage, AttachedTextFile } from "./ChatInput-draft-attachments";
 export { filterModelOptions } from "./ChatInput-model-options";
@@ -334,6 +337,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const thinkingDropdownRef = useRef<HTMLDivElement>(null);
   const contextWrapRef = useRef<HTMLDivElement>(null);
+  const contextDialogRef = useRef<HTMLDivElement>(null);
+  const contextReturnFocusRef = useRef<HTMLElement | null>(null);
+  const plusTriggerRef = useRef<HTMLButtonElement>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const historyMenuRef = useRef<HTMLDivElement>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
@@ -425,6 +431,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
       processFiles(files);
     },
     openContextPanel() {
+      contextReturnFocusRef.current = textareaRef.current;
       setContextOpen(true);
     },
   }));
@@ -1151,14 +1158,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   // omp reports only a queued count over RPC; the texts are tracked in a
   // client-side mirror, so Edit/Delete/Steer act on that mirror through the
   // session hook's helpers.
-  const queuedEntries = [
-    ...(queuedMessages?.followUp ?? []).map((entry) => ({ kind: "follow-up" as const, ...entry })),
-    ...(queuedMessages?.steering ?? []).map((entry) => ({ kind: "steer" as const, ...entry })),
-  ];
-  const firstQueued = queuedEntries[0] ?? null;
-  const queuedCount = queuedEntries.length;
-
+  const queuedCount = (queuedMessages?.followUp.length ?? 0) + (queuedMessages?.steering.length ?? 0);
   const [queueExpanded, setQueueExpanded] = useState(false);
+
   // Invalidate confirmation if delivery or navigation changes the queue.
   const activeDeleteTarget = queuedDeleteTarget?.draftKey === draftKey
     && queuedDeleteTarget?.queue === queuedMessages ? queuedDeleteTarget : null;
@@ -1188,20 +1190,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
     }
   }, [onPromoteQueuedToSteer]);
 
-  const handleQueuedEdit = useCallback(() => {
-    if (!firstQueued) return;
-    handleItemEdit(firstQueued);
-  }, [firstQueued, handleItemEdit]);
-
-  const handleQueuedDelete = useCallback(() => {
-    if (!firstQueued) return;
-    handleItemDelete(firstQueued);
-  }, [firstQueued, handleItemDelete]);
-
-  const handleQueuedSteer = useCallback(() => {
-    if (!firstQueued) return;
-    handleItemSteer(firstQueued);
-  }, [firstQueued, handleItemSteer]);
 
   const getNextSlashIndex = useCallback((direction: "up" | "down" | "left" | "right") => {
     const lastIndex = filteredSlashCommands.length - 1;
@@ -1550,6 +1538,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
     if (!thinkingDropdownOpen) return;
     requestAnimationFrame(() => thinkingDropdownRef.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"]:not([disabled])')?.focus());
   }, [thinkingDropdownOpen]);
+  useEffect(() => {
+    if (!contextOpen) return;
+    requestAnimationFrame(() => contextDialogRef.current?.focus());
+  }, [contextOpen]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -1581,6 +1573,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
     <div
       role="group"
       aria-label={t("chatInput.composerLabel")}
+      className="chat-composer-frame"
       style={{
         flexShrink: 0,
         background: "transparent",
@@ -1625,7 +1618,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
           e.target.value = "";
         }}
       />
-      <div style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH, margin: "0 auto" }}>
+      <div className="chat-composer-content" style={{ maxWidth: CHAT_COLUMN_MAX_WIDTH, margin: "0 auto" }}>
         <ModelErrorBanner error={modelError} />
         <ComposerModeStatus goal={activeGoal} plan={activePlan} />
         {/* Retry banner */}
@@ -1679,111 +1672,18 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
             {compactResultText}
           </div>
         )}
-        {/* Image previews */}
-        {attachError && (
-          <div role="alert" style={{
-            marginBottom: 8, padding: "5px 10px",
-            background: "color-mix(in srgb, var(--status-error) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--status-error) 30%, transparent)",
-            borderRadius: 6, fontSize: 12, color: "var(--status-error)",
-          }}>
-            {attachError}
-          </div>
-        )}
-        {attachedImages.length > 0 && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            {attachedImages.map((img, i) => (
-              <div key={i} style={{ position: "relative", flexShrink: 0 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.previewUrl}
-                  alt=""
-                  style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)", display: "block" }}
-                />
-                <button
-                  className="attachment-remove-button"
-                  onClick={() => removeImage(i)}
-                  title={t("chatInput.removeImage")}
-                  aria-label={t("chatInput.removeImage")}
-                  style={{
-                    position: "absolute", top: -5, right: -5,
-                    width: 24, height: 24, borderRadius: "50%",
-                    background: "var(--bg-panel)", border: "1px solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", padding: 0, color: "var(--text-muted)",
-                    transition: "color var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm)",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-panel)"; }}
-                >
-                  <svg width="9" height="9" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {attachedTextFiles.length > 0 && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-            {attachedTextFiles.map((file, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  maxWidth: 260, height: 30,
-                  padding: "0 6px 0 9px",
-                  border: "1px solid var(--border)",
-                  borderRadius: 6,
-                  background: "var(--bg-panel)",
-                  fontSize: 12,
-                  color: "var(--text)",
-                }}
-              >
-                <span style={{ flexShrink: 0, display: "flex", color: "var(--text-muted)" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                </span>
-                <span
-                  title={file.name}
-                  style={{
-                    minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    fontFamily: "var(--font-mono)", fontSize: 11.5,
-                  }}
-                >
-                  {file.name}
-                </span>
-                <span style={{ flexShrink: 0, fontSize: 10, color: "var(--text-dim)" }}>
-                  {file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`}
-                </span>
-                <button
-                  className="attachment-remove-button"
-                  onClick={() => removeTextFile(i)}
-                  title={t("chatInput.removeFile")}
-                  aria-label={t("chatInput.removeFile")}
-                  style={{
-                    flexShrink: 0, width: 18, height: 18,
-                    borderRadius: "50%",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "transparent", border: "none",
-                    cursor: "pointer", padding: 0, color: "var(--text-muted)",
-                    transition: "color var(--dur-fast) var(--ease-out-warm), background var(--dur-fast) var(--ease-out-warm)",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
-                >
-                  <svg width="9" height="9" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <AttachmentPreviews
+          error={attachError}
+          images={attachedImages}
+          files={attachedTextFiles}
+          removeImageLabel={t("chatInput.removeImage")}
+          removeFileLabel={t("chatInput.removeFile")}
+          onRemoveImage={removeImage}
+          onRemoveFile={removeTextFile}
+        />
 
         {/* Main input */}
-        <div style={{ position: "relative" }}>
+        <div className="chat-composer-main" style={{ position: "relative" }}>
           {historyMenuVisible && (
             <div
               ref={historyMenuRef}
@@ -2146,259 +2046,17 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               </div>
             );
           })()}
-        {/* Queued prompts panel / bar — attached to composer's top edge.
-            When 1 item: compact single row. When multiple items: compact row with expand toggle, or full list when expanded. */}
-        {queuedCount > 0 && (
-          <div
-            aria-label={t("chatInput.queuedPrompts")}
-            style={{
-              border: "1px solid var(--border)",
-              borderBottom: "none",
-              borderRadius: "var(--radius-card) var(--radius-card) 0 0",
-              background: "var(--bg-panel)",
-              overflow: "hidden",
-            }}
-          >
-            {queuedCount === 1 ? (
-              <div style={{
-                padding: "5px 8px 5px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                minWidth: 0,
-              }}>
-                <span style={{
-                  flexShrink: 0,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
-                }}>
-                  {firstQueued?.kind === "steer" ? t("chatInput.queuedSteer") : t("chatInput.queuedFollowUp")}
-                </span>
-                <span
-                  title={firstQueued?.text}
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontSize: 12,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  {firstQueued?.text || t("chatInput.attachFile")}
-                </span>
-                {(firstQueued?.attachments.length ?? 0) > 0 && (
-                  <span title={t("chatInput.queuedImages", { count: firstQueued?.attachments.length ?? 0 })} style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-mono)" }}>
-                    +{firstQueued?.attachments.length} img
-                  </span>
-                )}
-                <QueuedActionButton onClick={handleQueuedEdit} title={t("chatInput.queuedEditTitle")}>
-                  {t("chatInput.queuedEdit")}
-                </QueuedActionButton>
-                <QueuedActionButton onClick={handleQueuedDelete} title={t("chatInput.queuedDeleteTitle")}>
-                  {t("chatInput.queuedDelete")}
-                </QueuedActionButton>
-                {firstQueued?.kind === "follow-up" && (
-                  <QueuedActionButton onClick={handleQueuedSteer} title={t("chatInput.queuedSteerTitle")} accent>
-                    {t("chatInput.queuedSteerAction")}
-                  </QueuedActionButton>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div style={{
-                  padding: "5px 8px 5px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                  borderBottom: queueExpanded ? "1px solid var(--border)" : "none",
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setQueueExpanded((prev) => !prev)}
-                    aria-expanded={queueExpanded}
-                    title={queueExpanded ? t("chatInput.collapseQueued") : t("chatInput.expandQueued")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      minWidth: 0,
-                      flex: 1,
-                      textAlign: "left",
-                    }}
-                  >
-                    <ChevronDown
-                      size={13}
-                      strokeWidth={2}
-                      style={{
-                        transform: queueExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform var(--dur-fast) var(--ease-out-warm)",
-                        flexShrink: 0,
-                      }}
-                      aria-hidden
-                    />
-                    <span>{t("chatInput.queuedPrompts")}</span>
-                    <span style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 10 }}>({queuedCount})</span>
-                    {!queueExpanded && firstQueued && (
-                      <span
-                        style={{
-                          marginLeft: 4,
-                          color: "var(--text-dim)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontSize: 11,
-                          fontWeight: 400,
-                          textTransform: "none",
-                        }}
-                      >
-                        {firstQueued.kind === "steer" ? `[${t("chatInput.queuedSteer")}] ` : ""}{firstQueued.text || t("chatInput.attachFile")}{firstQueued.attachments.length > 0 ? ` · ${t("chatInput.queuedImages", { count: firstQueued.attachments.length })}` : ""}
-                      </span>
-                    )}
-                  </button>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => setQueueExpanded((prev) => !prev)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        padding: "2px 6px",
-                        cursor: "pointer",
-                        color: "var(--text-dim)",
-                        fontSize: 11,
-                      }}
-                    >
-                      {queueExpanded ? t("chatInput.collapseQueued") : t("chatInput.expandQueued")}
-                    </button>
-                  </div>
-                </div>
-                {queueExpanded && (
-                  <div style={{
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                    background: "var(--bg-subtle)",
-                    padding: "4px 0",
-                  }}>
-                    {queuedEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        style={{
-                          padding: "4px 8px 4px 12px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          background: "var(--bg-panel)",
-                          fontSize: 12,
-                        }}
-                      >
-                        <span style={{
-                          flexShrink: 0,
-                          fontSize: 9.5,
-                          fontWeight: 600,
-                          letterSpacing: "0.05em",
-                          textTransform: "uppercase",
-                          padding: "1px 4px",
-                          borderRadius: 4,
-                          background: entry.kind === "steer" ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--bg)",
-                          border: `1px solid ${entry.kind === "steer" ? "var(--accent)" : "var(--border)"}`,
-                          color: entry.kind === "steer" ? "var(--accent)" : "var(--text-muted)",
-                        }}>
-                          {entry.kind === "steer" ? t("chatInput.queuedSteer") : t("chatInput.queuedFollowUp")}
-                        </span>
-                        <span
-                          title={entry.text}
-                          style={{
-                            flex: 1,
-                            minWidth: 0,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            color: "var(--text)",
-                            fontFamily: "var(--font-mono)",
-                            fontSize: 11.5,
-                          }}
-                        >
-                          {entry.text || t("chatInput.attachFile")}
-                        </span>
-                        {entry.attachments.length > 0 && (
-                          <span title={t("chatInput.queuedImages", { count: entry.attachments.length })} style={{ flexShrink: 0, color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-mono)" }}>
-                            +{entry.attachments.length} img
-                          </span>
-                        )}
-                        <QueuedActionButton onClick={() => handleItemEdit(entry)} title={t("chatInput.queuedEditTitle")}>
-                          {t("chatInput.queuedEdit")}
-                        </QueuedActionButton>
-                        <QueuedActionButton onClick={() => handleItemDelete(entry)} title={t("chatInput.queuedDeleteTitle")}>
-                          {t("chatInput.queuedDelete")}
-                        </QueuedActionButton>
-                        {entry.kind === "follow-up" && (
-                          <QueuedActionButton onClick={() => handleItemSteer(entry)} title={t("chatInput.queuedSteerTitle")} accent>
-                            {t("chatInput.queuedSteerAction")}
-                          </QueuedActionButton>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {/* Live agent status bar — attached to composer's top edge */}
-        {statusText && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              border: `1px solid ${bashMode ? "var(--tool-bg)" : "color-mix(in srgb, var(--border) 70%, transparent)"}`,
-              borderBottom: "none",
-              borderRadius: queuedCount > 0 ? 0 : "var(--radius-card) var(--radius-card) 0 0",
-              background: "var(--bg-panel)",
-              padding: "6px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 12,
-              color: "var(--text-muted)",
-            }}
-          >
-            <span
-              aria-hidden
-              className="live-status-dot live-pulse inline-block h-2 w-2 shrink-0 rounded-full bg-accent"
-            />
-            <span style={{ minWidth: 0, flex: 1, overflowWrap: "anywhere" }}>{statusText}</span>
-          </div>
-        )}
-          <div
-            className="chat-input-shell"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              background: "var(--bg)",
-              border: `1px solid ${bashMode ? "var(--tool-bg)" : "color-mix(in srgb, var(--border) 70%, transparent)"}`,
-              borderRadius: (queuedCount > 0 || Boolean(statusText)) ? "0 0 var(--radius-card) var(--radius-card)" : "var(--radius-card)",
-              padding: "12px 12px 10px",
-              boxShadow: "var(--shadow-card)",
-            } as React.CSSProperties}
-          >
+        <ActiveRunRail
+          statusText={statusText}
+          queuedMessages={queuedMessages}
+          bashMode={bashMode}
+          expanded={queueExpanded}
+          onExpandedChange={setQueueExpanded}
+          onEdit={handleItemEdit}
+          onDelete={handleItemDelete}
+          onSteer={handleItemSteer}
+        />
+        <ComposerShell attachedRail={queuedCount > 0 || Boolean(statusText)} bashMode={bashMode} running={isStreaming}>
           {isRecording || isPaused || isReviewing || isTranscribing || transcribeError ? (
             <RecordingDeck
               captureRef={captureRef}
@@ -2419,6 +2077,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
             />
           ) : (
           <textarea
+            className="chat-composer-textarea"
             ref={textareaRef}
             value={value}
             onChange={(e) => {
@@ -2467,26 +2126,18 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
           />
           )}
 
-          {/* Toolbar: plus menu · model · reasoning · fast · compact · send/queue/stop */}
-          <div className="composer-toolbar" style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            marginTop: 8,
-            paddingTop: 8,
-            borderTop: "1px solid color-mix(in srgb, var(--border) 62%, transparent)",
-            flexWrap: "wrap",
-            rowGap: 6,
-          }}>
+          <ComposerToolbar>
             {/* Plus menu — attachment · tools submenu · advisor submenu */}
-            <div ref={plusMenuRef} style={{ position: "relative", flexShrink: 0 }}>
+            <div ref={plusMenuRef} className="composer-plus-control" style={{ position: "relative", flexShrink: 0 }}>
               <button
+                ref={plusTriggerRef}
                 onClick={() => setPlusMenuOpen((v) => !v)}
                 title={t("chatInput.plusMenu")}
                 aria-controls={plusMenuId}
                 aria-label={t("chatInput.plusMenu")}
                 aria-expanded={plusMenuOpen}
                 aria-haspopup="menu"
+                className="composer-icon-control composer-plus-trigger"
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: "var(--control-height-sm)", height: "var(--control-height-sm)", padding: 0,
@@ -2503,10 +2154,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 <Plus size={14} strokeWidth={2} aria-hidden="true" />
               </button>
               {plusMenuOpen && (
-                <div
+                <MenuSurface
                   id={plusMenuId}
                   aria-orientation="vertical"
-                  className="picker-panel"
+                  className={undefined}
                   role="menu"
                   aria-label={t("chatInput.plusMenu")}
                   onKeyDown={(event) => {
@@ -2605,7 +2256,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                       className="composer-plus-menu-action"
                       role="menuitem"
                       type="button"
-                      onClick={() => { setPlusMenuOpen(false); setContextOpen(true); }}
+                      onClick={() => {
+                        contextReturnFocusRef.current = plusTriggerRef.current;
+                        setPlusMenuOpen(false);
+                        setContextOpen(true);
+                      }}
                       style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: 0, borderRadius: 5, background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, textAlign: "left" }}
                     >
                       <Shrink size={12} strokeWidth={1.8} aria-hidden="true" />
@@ -2706,7 +2361,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                       )}
                     </>
                   )}
-                </div>
+                </MenuSurface>
               )}
             </div>
             {/* Model selector — compact text button with dropdown */}
@@ -2719,6 +2374,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   aria-label={`${t("chatInput.changeModel")}: ${currentName ?? (modelOptions.length > 0
                     ? t("chatInput.selectModel")
                     : showModelsLoading ? t("chatInput.loadingModels") : t("chatInput.noModels"))}`}
+                  className="composer-selector-trigger composer-model-trigger"
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
                     height: "var(--control-height-sm)",
@@ -2831,6 +2487,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   aria-label={`${t("chatInput.changeReasoning")}: ${thinkingDisplayLabel}`}
                   aria-expanded={thinkingDropdownOpen}
                   aria-haspopup="menu"
+                  className="composer-selector-trigger composer-thinking-trigger"
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
                     height: "var(--control-height-sm)", width: "100%", padding: "0 4px", background: thinkingDropdownOpen ? "var(--bg-hover)" : "none",
@@ -2849,10 +2506,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   <ChevronDown size={12} strokeWidth={1.8} style={{ flexShrink: 0, opacity: 0.7, transform: thinkingDropdownOpen ? "rotate(180deg)" : "none", transition: "transform var(--dur-fast) var(--ease-out-warm)" }} aria-hidden="true" />
                 </button>
                 {thinkingDropdownOpen && (
-                  <div
+                  <MenuSurface
                     id={thinkingMenuId}
                     aria-label={t("chatInput.reasoningLabel")}
-                    className="picker-panel"
+                    className={undefined}
                     role="menu"
                     onKeyDown={(event) => {
                       if (event.key === "Escape") {
@@ -2902,7 +2559,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                       <span>{t("chatInput.appliesNextPrompt")}</span>
                       <span style={{ fontWeight: 600, color: "var(--text-muted)", textTransform: "capitalize" }}>{thinkingDisplayLabel}</span>
                     </div>
-                  </div>
+                  </MenuSurface>
                 )}
               </div>
             )}
@@ -2963,7 +2620,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
 
             {/* Context ring: usage gauge opening the session context popover */}
             {onCompact && (
-              <div ref={contextWrapRef} className="composer-context-control" style={{ position: "relative", flexShrink: 0 }}>
+              <div ref={contextWrapRef} className={isMobile ? undefined : "composer-context-control"} style={{ position: "relative", flexShrink: 0 }}>
                 <button
                   type="button"
                   className="composer-context-trigger"
@@ -2971,8 +2628,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   aria-label={t("composerContext.title")}
                   aria-expanded={contextOpen}
                   aria-haspopup="dialog"
+                  onClick={() => {
+                    contextReturnFocusRef.current = contextWrapRef.current?.querySelector<HTMLButtonElement>("button") ?? null;
+                    setContextOpen((value) => !value);
+                  }}
                   style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: isMobile ? "none" : "flex", alignItems: "center", justifyContent: "center",
                     width: 28, height: 28, padding: 0,
                     background: contextOpen ? "var(--bg-hover)" : "none", border: "none",
                     borderRadius: 7,
@@ -3015,6 +2676,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 </button>
                 {contextOpen && (
                   <div
+                    ref={contextDialogRef}
+                    tabIndex={-1}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Escape") return;
+                      event.stopPropagation();
+                      setContextOpen(false);
+                      requestAnimationFrame(() => contextReturnFocusRef.current?.focus());
+                    }}
                     role="dialog"
                     aria-label={t("composerContext.title")}
                     className="picker-panel"
@@ -3054,6 +2723,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                         if (isCompacting) onAbortCompaction?.();
                         else onCompact?.();
                         setContextOpen(false);
+                        requestAnimationFrame(() => contextReturnFocusRef.current?.focus());
                       }}
                       disabled={isStreaming && !isCompacting}
                       title={isCompacting ? t("chatInput.stopCompaction") : t("chatInput.compactContext")}
@@ -3210,8 +2880,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 <span className="composer-primary-action-label">{t("chatInput.send")}</span>
               </button>
             )}
-          </div>
-          </div>
+          </ComposerToolbar>
+        </ComposerShell>
         </div>
 
         {/* Bash mode status label */}

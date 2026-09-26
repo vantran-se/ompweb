@@ -117,7 +117,7 @@ export function SettingsTabs({
                 cursor: disabled ? "not-allowed" : "pointer",
               }}
             >
-              <span style={{ position: "relative", display: "inline-flex", flexShrink: 0, marginTop: 2, color: selected ? "var(--accent)" : "currentColor" }}>
+              <span className="settings-nav-icon">
                 <Icon size={16} aria-hidden="true" />
                 {hasAttention && (
                   <span
@@ -135,13 +135,9 @@ export function SettingsTabs({
                   />
                 )}
               </span>
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ fontSize: 13, fontWeight: selected ? 600 : 500, lineHeight: 1.3, color: selected ? "var(--text)" : "inherit" }}>
-                  {displayLabel}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.35, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {displayDescription}
-                </div>
+              <div className="settings-nav-copy">
+                <div className="settings-nav-label">{displayLabel}</div>
+                <div className="settings-nav-description">{displayDescription}</div>
               </div>
             </button>
           );
@@ -151,7 +147,7 @@ export function SettingsTabs({
   }
 
   return (
-    <nav className="settings-nav-horizontal" aria-label={t("settingsTabs.ariaLabel")} role="tablist" style={{ display: "flex", gap: 3, padding: "7px 12px", borderBottom: "1px solid var(--border)", background: "var(--bg-panel)", flexShrink: 0, overflowX: "auto" }}>
+    <nav className="settings-nav-horizontal" aria-label={t("settingsTabs.ariaLabel")} role="tablist">
       {SETTINGS_CATEGORIES.map(({ id, label, description, Icon, needsWorkspace }, index) => {
         const labelKey = `settingsTabs.${id}.label`;
         const descKey = `settingsTabs.${id}.description`;
@@ -178,10 +174,10 @@ export function SettingsTabs({
             disabled={disabled}
             onClick={() => onSelect(id)}
             onKeyDown={(event) => onKeyDown(event, index)}
-            className="settings-nav-horizontal-item"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", border: "none", borderRadius: "var(--radius-control)", background: selected ? "var(--bg-selected)" : "transparent", color: selected ? "var(--text)" : "var(--text-muted)", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, fontSize: 12, whiteSpace: "nowrap", textAlign: "left" }}
+            className={`settings-nav-horizontal-item${selected ? " active" : ""}`}
+            style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1 }}
           >
-            <span style={{ position: "relative", display: "inline-flex", flexShrink: 0, marginTop: 1 }}>
+            <span className="settings-nav-horizontal-icon">
               <Icon size={13} aria-hidden="true" />
               {hasAttention && (
                 <span
@@ -199,9 +195,7 @@ export function SettingsTabs({
                 />
               )}
             </span>
-            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", fontWeight: selected ? 600 : 500 }}>
-              {displayLabel}
-            </span>
+            <span className="settings-nav-horizontal-label">{displayLabel}</span>
           </button>
         );
       })}

@@ -293,7 +293,7 @@ export function McpConfig({ cwd, sessionId }: { cwd: string | null; sessionId?: 
             </button>
           )}
         </div>
-        {message && <Alert variant={message.toLowerCase().includes("fail") || message.toLowerCase().includes("error") || message.toLowerCase().includes("invalid") ? "error" : "info"} description={message} onDismiss={() => setMessage(null)} />}
+        {message && <Alert variant={message.toLowerCase().includes("fail") || message.toLowerCase().includes("error") || message.toLowerCase().includes("invalid") ? "error" : "info"} description={message} onDismiss={() => setMessage(null)} dismissLabel={t("chatWindow.close")} />}
       </div>
     </div>
     </div>}

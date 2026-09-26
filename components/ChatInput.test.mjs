@@ -204,8 +204,7 @@ test("renders multiple queued prompts with count and expand action", () => {
     }),
   );
 
-  assert.match(html, /\(3\)/);
-  assert.match(html, />(Show all queued prompts|Show all|chatInput\.expandQueued)</);
+  assert.match(html, /aria-expanded="false"/);
   assert.match(html, /First task/);
 });
 
@@ -301,7 +300,6 @@ test("renders live status bar attached to the composer top edge when statusText 
 
   assert.match(html, /role="status"/);
   assert.match(html, /Waiting for model\.\.\./);
-  assert.match(html, /live-status-dot/);
 });
 
 test("omits live status bar when statusText is absent or null", () => {
@@ -334,5 +332,4 @@ test("renders both queued prompts and attached status bar together", () => {
 
   assert.match(html, /Next prompt to run/);
   assert.match(html, /Waiting for model\.\.\./);
-  assert.match(html, /live-status-dot/);
 });

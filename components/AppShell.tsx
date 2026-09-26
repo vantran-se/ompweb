@@ -6,6 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSidebarHistory } from "@/hooks/useSidebarHistory";
 import { useModalDialog } from "@/hooks/useModalDialog";
+import { usePanelResize } from "@/hooks/usePanelResize";
+import { useViewportMetrics } from "@/hooks/useViewportMetrics";
+import { AppShellTopbar } from "./shell/AppShellTopbar";
+import { deriveDestinationContext } from "./shell/DestinationContext";
+import { AppShellDestination } from "./shell/AppShellDestination";
+import { AppShellOverlays } from "./shell/AppShellOverlays";
 import { SessionSidebar } from "./SessionSidebar";
 import { ToastProvider } from "./ui/toast";
 import { toast } from "./ui/toast";
@@ -29,6 +35,7 @@ import { encodeFilePathForApi, getFileName, getRelativeFilePath } from "@/lib/fi
 import { buildAtMentionText, buildFileAtMentionsText, buildFileLineMentionText } from "@/lib/file-fuzzy";
 import { getInitialNavigation } from "@/lib/initial-navigation";
 import { comparableProjectPath } from "@/lib/comparable-path";
+import { PHONE_MAX_PX } from "@/lib/responsive-contract";
 import { clearDraft } from "@/lib/draft-store";
 import { showCompletionNotification } from "@/lib/browser-notifications";
 import {
@@ -124,21 +131,33 @@ export function AppShell() {
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarReady, setMobileSidebarReady] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(SIDEBAR_DEFAULT_WIDTH);
-  const [toolCallsDefaultCollapsed, setToolCallsDefaultCollapsed] = useState(true);
-  const [providerUsageVisible, setProviderUsageVisible] = useState(true);
-  const [scopeNativeSelectAll, setScopeNativeSelectAll] = useState(false);
-  const [sidebarResizing, setSidebarResizing] = useState(false);
-  // Active drag handlers so an unmount mid-drag can detach them.
-  const sidebarResizeHandlersRef = useRef<{ onMove: (ev: MouseEvent) => void; onUp: () => void } | null>(null);
-  // DOM element + live width during a drag (see handleSidebarResizeStart).
   const sidebarContainerRef = useModalDialog<HTMLElement>({
     onClose: () => setSidebarOpen(false),
     active: isMobile && mobileSidebarReady && sidebarOpen && !settingsTab,
+    blurOnDeactivate: true,
   });
-  const pendingSidebarWidthRef = useRef<number>(SIDEBAR_DEFAULT_WIDTH);
+  const {
+    width: sidebarWidth,
+    resizing: sidebarResizing,
+    resetWidth: resetSidebarWidth,
+    onResizeStart: handleSidebarResizeStart,
+    onResizeKey: handleSidebarResizeKey,
+  } = usePanelResize({
+    elementRef: sidebarContainerRef,
+    cssVariable: "--sidebar-width",
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    initialWidth: SIDEBAR_DEFAULT_WIDTH,
+    loadWidth: loadSidebarWidth,
+    clampWidth: clampSidebarWidth,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    minimumWidth: SIDEBAR_DEFAULT_WIDTH,
+    disabled: isMobile,
+  });
+  const [toolCallsDefaultCollapsed, setToolCallsDefaultCollapsed] = useState(true);
+  const [providerUsageVisible, setProviderUsageVisible] = useState(true);
+  const [scopeNativeSelectAll, setScopeNativeSelectAll] = useState(false);
+  useViewportMetrics();
   useEffect(() => {
-    setSidebarWidth(loadSidebarWidth());
     try {
       setToolCallsDefaultCollapsed(window.localStorage.getItem(TOOL_CALLS_COLLAPSED_STORAGE_KEY) !== "false");
       setProviderUsageVisible(window.localStorage.getItem(PROVIDER_USAGE_VISIBLE_STORAGE_KEY) !== "false");
@@ -171,22 +190,6 @@ export function AppShell() {
       // The preference still applies for this page load.
     }
   }, []);
-  // Persist the committed width (after each change; skipped mid-drag, then
-  // written once the drag ends). The first run is skipped so the mount-time
-  // default cannot overwrite the stored width before it is loaded.
-  const sidebarWidthMountedRef = useRef(false);
-  useEffect(() => {
-    if (!sidebarWidthMountedRef.current) {
-      sidebarWidthMountedRef.current = true;
-      return;
-    }
-    if (sidebarResizing) return;
-    try {
-      window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
-    } catch {
-      // ignore storage quota / privacy-mode errors
-    }
-  }, [sidebarWidth, sidebarResizing]);
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
   const [appUpdateDialogOpen, setAppUpdateDialogOpen] = useState(false);
   const [appUpdatePhase, setAppUpdatePhase] = useState<AppUpdatePhase>("idle");
@@ -253,19 +256,6 @@ export function AppShell() {
   useEffect(() => {
     setMobileSidebarReady(true);
   }, []);
-  // Chrome does not blur a focused descendant when a subtree becomes
-  // aria-hidden + inert (e.g. tapping a session button closes the mobile
-  // drawer), which leaves focus trapped where assistive tech cannot see it.
-  // Blur synchronously in the same commit so the AX tree never observes a
-  // focused element inside the hidden sidebar.
-  useLayoutEffect(() => {
-    if (sidebarOpen || !mobileSidebarReady) return;
-    const container = sidebarContainerRef.current;
-    const active = document.activeElement;
-    if (container && active instanceof HTMLElement && container.contains(active)) {
-      active.blur();
-    }
-  }, [sidebarOpen, mobileSidebarReady]);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/omp-update", {
@@ -747,171 +737,7 @@ export function AppShell() {
     setSidebarOpen((open) => !open);
   }, [isMobile]);
 
-  const resetSidebarWidth = useCallback(() => {
-    setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
-  }, []);
 
-  const changeSidebarWidth = useCallback((delta: number) => {
-    setSidebarWidth((prev) => clampSidebarWidth(prev + delta));
-  }, []);
-
-  const handleSidebarResizeKey = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      changeSidebarWidth(-10);
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      changeSidebarWidth(10);
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      resetSidebarWidth();
-    }
-  }, [changeSidebarWidth, resetSidebarWidth]);
-
-  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
-    if (isMobile) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = sidebarWidth;
-    // Interface Scale (html[data-ui-scale] zoom) leaves clientX in viewport
-    // pixels while the sidebar width is zoomed layout pixels: scale the drag
-    // delta so the edge tracks the pointer at any zoom (same --ui-scale
-    // ground truth as the zoom-aware menus in SessionSidebar-chrome).
-    let uiScale = 1;
-    try {
-      const raw = getComputedStyle(document.documentElement).getPropertyValue("--ui-scale");
-      const value = parseFloat(raw);
-      if (Number.isFinite(value) && value > 0) uiScale = value;
-    } catch {
-      // SSR/unavailable: fall back to unscaled math.
-    }
-    setSidebarResizing(true);
-    const onMove = (ev: MouseEvent) => {
-      const next = clampSidebarWidth(startWidth + (ev.clientX - startX) / uiScale);
-      // Write the CSS variable straight to the DOM: the flex row follows the
-      // pointer without re-rendering the whole AppShell on every mousemove.
-      sidebarContainerRef.current?.style.setProperty("--sidebar-width", `${next}px`);
-      pendingSidebarWidthRef.current = next;
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      sidebarResizeHandlersRef.current = null;
-      setSidebarResizing(false);
-      // Commit the final width so state and the persisted value agree with
-      // what the user actually dragged to.
-      setSidebarWidth(pendingSidebarWidthRef.current);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    pendingSidebarWidthRef.current = startWidth;
-    sidebarResizeHandlersRef.current = { onMove, onUp };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [isMobile, sidebarWidth]);
-
-  // If the app unmounts mid-drag, remove the window listeners and restore the
-  // body cursor; otherwise the handlers leak and body stays cursor:col-resize.
-  useEffect(() => () => {
-    const handlers = sidebarResizeHandlersRef.current;
-    if (!handlers) return;
-    window.removeEventListener("mousemove", handlers.onMove);
-    window.removeEventListener("mouseup", handlers.onUp);
-    sidebarResizeHandlersRef.current = null;
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, []);
-
-  const resetRightPanelWidth = useCallback(() => {
-    rightPanelRef.current?.style.removeProperty("--right-panel-width");
-    setRightPanelWidth(null);
-  }, []);
-
-  const changeRightPanelWidth = useCallback((delta: number) => {
-    setRightPanelWidth((prev) => {
-      // Keyboard steps from the fluid default start at the panel's live
-      // width so the first press doesn't jump to the clamp minimum.
-      const base = prev ?? rightPanelRef.current?.getBoundingClientRect().width ?? RIGHT_PANEL_MIN_WIDTH;
-      const next = clampRightPanelWidth(base + delta);
-      rightPanelRef.current?.style.setProperty("--right-panel-width", `${next}px`);
-      return next;
-    });
-  }, []);
-
-  const handleRightPanelResizeKey = useCallback((e: React.KeyboardEvent) => {
-    // The handle sits on the panel's left edge: left widens, right narrows.
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      changeRightPanelWidth(10);
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      changeRightPanelWidth(-10);
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      resetRightPanelWidth();
-    }
-  }, [changeRightPanelWidth, resetRightPanelWidth]);
-
-  const handleRightPanelResizeStart = useCallback((e: React.MouseEvent) => {
-    if (isMobile) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    // Live rect, not state: it always reflects the committed width (custom or
-    // fluid default), and keeps this callback above the state declarations
-    // without a TDZ cycle. The handle only exists while the panel is open.
-    const startWidth = rightPanelRef.current?.getBoundingClientRect().width
-      ?? RIGHT_PANEL_MIN_WIDTH;
-    // Same --ui-scale ground truth as the left sidebar handle: clientX is in
-    // viewport pixels while the panel width is zoomed layout pixels.
-    let uiScale = 1;
-    try {
-      const raw = getComputedStyle(document.documentElement).getPropertyValue("--ui-scale");
-      const value = parseFloat(raw);
-      if (Number.isFinite(value) && value > 0) uiScale = value;
-    } catch {
-      // SSR/unavailable: fall back to unscaled math.
-    }
-    setRightPanelResizing(true);
-    const onMove = (ev: MouseEvent) => {
-      // Dragging the left edge left grows the panel: inverse of the sidebar.
-      const next = clampRightPanelWidth(startWidth - (ev.clientX - startX) / uiScale);
-      // Write the CSS variable straight to the DOM: the flex row follows the
-      // pointer without re-rendering the whole AppShell on every mousemove.
-      rightPanelRef.current?.style.setProperty("--right-panel-width", `${next}px`);
-      pendingRightPanelWidthRef.current = next;
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      rightResizeHandlersRef.current = null;
-      setRightPanelResizing(false);
-      // Commit the final width so state and the persisted value agree with
-      // what the user actually dragged to.
-      setRightPanelWidth(pendingRightPanelWidthRef.current);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    pendingRightPanelWidthRef.current = startWidth;
-    rightResizeHandlersRef.current = { onMove, onUp };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [isMobile]);
-
-  // If the app unmounts mid-drag, remove the window listeners and restore the
-  // body cursor; otherwise the handlers leak and body stays cursor:col-resize.
-  useEffect(() => () => {
-    const handlers = rightResizeHandlersRef.current;
-    if (!handlers) return;
-    window.removeEventListener("mousemove", handlers.onMove);
-    window.removeEventListener("mouseup", handlers.onUp);
-    rightResizeHandlersRef.current = null;
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, []);
 
 
   // Dismiss the topbar dropdowns on outside click or Escape. The Escape
@@ -944,18 +770,29 @@ export function AppShell() {
   const [rightPanelHasOpened, setRightPanelHasOpened] = useState(false);
   const [rightView, setRightView] = useState<"explorer" | "git" | "file">("explorer");
   // User-chosen pixel width (null = fluid 42% default), persisted.
-  const [rightPanelWidth, setRightPanelWidth] = useState<number | null>(null);
-  const [rightPanelResizing, setRightPanelResizing] = useState(false);
   const rightPanelRef = useModalDialog<HTMLDivElement>({
     onClose: () => setRightPanelOpen(false),
     active: isCompactOverlay && rightPanelHasOpened && rightPanelOpen && !settingsTab,
   });
+  const {
+    width: rightPanelWidth,
+    resizing: rightPanelResizing,
+    resetWidth: resetRightPanelWidth,
+    onResizeStart: handleRightPanelResizeStart,
+    onResizeKey: handleRightPanelResizeKey,
+  } = usePanelResize({
+    elementRef: rightPanelRef,
+    cssVariable: "--right-panel-width",
+    storageKey: RIGHT_PANEL_WIDTH_STORAGE_KEY,
+    initialWidth: null,
+    loadWidth: loadRightPanelWidth,
+    clampWidth: clampRightPanelWidth,
+    defaultWidth: null,
+    minimumWidth: RIGHT_PANEL_MIN_WIDTH,
+    disabled: isMobile,
+    direction: -1,
+  });
   const rightPanelIsModal = isCompactOverlay && rightPanelHasOpened && rightPanelOpen && !settingsTab;
-  const pendingRightPanelWidthRef = useRef<number | null>(null);
-  const rightResizeHandlersRef = useRef<{ onMove: (ev: MouseEvent) => void; onUp: () => void } | null>(null);
-  useEffect(() => {
-    setRightPanelWidth(loadRightPanelWidth());
-  }, []);
   useEffect(() => {
     if (rightPanelOpen) setRightPanelHasOpened(true);
   }, [rightPanelOpen]);
@@ -970,22 +807,6 @@ export function AppShell() {
     setExplorerGitCount(changedCount);
     setExplorerIsRepo(isRepo);
   }, []);
-  // Same guard as the left sidebar: skip the mount run and mid-drag writes. A
-  // reset (null) removes the key so the fluid default returns.
-  const rightPanelWidthMountedRef = useRef(false);
-  useEffect(() => {
-    if (!rightPanelWidthMountedRef.current) {
-      rightPanelWidthMountedRef.current = true;
-      return;
-    }
-    if (rightPanelResizing) return;
-    try {
-      if (rightPanelWidth === null) window.localStorage.removeItem(RIGHT_PANEL_WIDTH_STORAGE_KEY);
-      else window.localStorage.setItem(RIGHT_PANEL_WIDTH_STORAGE_KEY, String(rightPanelWidth));
-    } catch {
-      // ignore storage quota / privacy-mode errors
-    }
-  }, [rightPanelWidth, rightPanelResizing]);
 
   // Same @mention format as the chat input's @ autocomplete, so the agent's
   // read tool resolves it the same way (it strips the @ prefix).
@@ -1319,13 +1140,18 @@ export function AppShell() {
     });
   }, [fileTabs]);
 
-  const handleOpenFile = useCallback((filePath: string, fileName: string, sourceSessionId?: string | null) => {
+  const handleOpenFile = useCallback((filePath: string, fileName: string, sourceSessionId?: string | null, sourceCwd?: string | null) => {
     const tabId = `file:${filePath}`;
     setFileTabs((prev) => {
       const existing = prev.find((t) => t.id === tabId);
-      if (!existing) return [...prev, { id: tabId, label: fileName, filePath, sourceSessionId }];
-      if (!sourceSessionId || existing.sourceSessionId === sourceSessionId) return prev;
-      return prev.map((t) => t.id === tabId ? { ...t, sourceSessionId } : t);
+      if (!existing) return [...prev, { id: tabId, label: fileName, filePath, sourceSessionId, sourceCwd }];
+      if ((!sourceSessionId || existing.sourceSessionId === sourceSessionId)
+        && (!sourceCwd || existing.sourceCwd === sourceCwd)) return prev;
+      return prev.map((t) => t.id === tabId ? {
+        ...t,
+        ...(sourceSessionId ? { sourceSessionId } : {}),
+        ...(sourceCwd ? { sourceCwd } : {}),
+      } : t);
     });
     setActiveFileTabId(tabId);
     setRightView("file");
@@ -1339,24 +1165,24 @@ export function AppShell() {
   // selected / new-session cwd (mirrors what the sidebar used to pass down).
   const explorerCwd = activeCwd ?? selectedSession?.cwd ?? newSessionCwd ?? null;
   const handleOpenLinkedFile = useCallback((filePath: string) => {
-    handleOpenFile(filePath, getFileName(filePath), selectedSession?.id ?? null);
-  }, [handleOpenFile, selectedSession?.id]);
+    handleOpenFile(filePath, getFileName(filePath), selectedSession?.id ?? null, activeCwd ?? selectedSession?.cwd ?? null);
+  }, [activeCwd, handleOpenFile, selectedSession?.cwd, selectedSession?.id]);
 
   // File-panel integrations: every action works on the active tab so the right
   // panel behaves like an editor toolbar, not just a tab strip.
   const handleMentionActiveFile = useCallback(() => {
     if (!activeFileTab) return;
-    handleAtMention(getRelativeFilePath(activeFileTab.filePath, activeCwd ?? undefined), false);
-  }, [activeFileTab, activeCwd, handleAtMention]);
+    handleAtMention(getRelativeFilePath(activeFileTab.filePath, activeFileTab.sourceCwd ?? undefined), false);
+  }, [activeFileTab, handleAtMention]);
 
   const handleCopyActiveFilePath = useCallback(() => {
     if (!activeFileTab) return;
-    const relative = getRelativeFilePath(activeFileTab.filePath, activeCwd ?? undefined);
+    const relative = getRelativeFilePath(activeFileTab.filePath, activeFileTab.sourceCwd ?? undefined);
     copyText(relative).then(
       () => toast.success(t("appShell.copied")),
       () => toast.error(t("appShell.commandCopyFailed")),
     );
-  }, [activeFileTab, activeCwd, t]);
+  }, [activeFileTab, t]);
 
   const handleDownloadActiveFile = useCallback(() => {
     if (!activeFileTab) return;
@@ -1412,10 +1238,11 @@ export function AppShell() {
     );
   }, [selectedSession]);
 
-  // Show chat area if a session is selected, or if we have a cwd to start a new session in
-  const effectiveNewSessionCwd = newSessionCwd ?? (selectedSession === null && activeCwd ? activeCwd : null);
+  // Derived view of the existing session/workspace state; it never owns identity.
+  const destination = deriveDestinationContext(selectedSession, newSessionCwd, activeCwd);
+  const effectiveNewSessionCwd = destination.kind === "session" || destination.kind === "none" ? null : destination.cwd;
   const newSessionProject = (workspaceOptions.cwd === effectiveNewSessionCwd ? workspaceOptions.selectedProject : null) ?? effectiveNewSessionCwd ?? "";
-  const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
+  const showChat = destination.showChat;
   const currentRate = generationSpeed?.current;
   const rate = currentRate ?? generationSpeed?.average;
   const speed = showChat ? formatGenerationSpeed(rate) : null;
@@ -1613,7 +1440,7 @@ export function AppShell() {
           animation: none;
         }
       }
-      @media (max-width: 640px) {
+      @media (max-width: ${PHONE_MAX_PX}px) {
         .sidebar-overlay-backdrop.sidebar-mobile-pending {
           opacity: 0 !important;
           pointer-events: none !important;
@@ -1727,17 +1554,7 @@ export function AppShell() {
         ) : (
           <>
         {/* Top bar: 3-zone segmented control bar */}
-        <div ref={topBarRef} className="shell-topbar" style={{
-          position: "relative",
-          alignItems: "center",
-          flexShrink: 0,
-          borderBottom: "1px solid var(--border)",
-          minHeight: isMobile ? "calc(44px + env(safe-area-inset-top))" : 36,
-          background: "var(--bg-panel)",
-          padding: isMobile ? "env(safe-area-inset-top) 4px 0" : "0 8px",
-          gap: "0 8px",
-          minWidth: 0,
-        }}>
+        <AppShellTopbar topBarRef={topBarRef} isPhone={isMobile}>
           {/* Left Zone: Utility group (sidebar, theme, language) & session controls (history, branches, system) */}
           <div className="shell-topbar-tools" style={{ display: "flex", alignItems: "center", gap: 4, height: isMobile ? 43 : 35, minWidth: 0, flexShrink: 0 }}>
             <button
@@ -2078,11 +1895,11 @@ export function AppShell() {
             })()}
           </div>
 
-        </div>
+        </AppShellTopbar>
 
         {/* Chat content */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-          {showChat ? (
+          <AppShellDestination context={destination} chat={(
             <ChatWindow
               key={sessionKey}
               session={selectedSession}
@@ -2149,7 +1966,7 @@ export function AppShell() {
               onOpenProviders={() => setSettingsTab("providers")}
               toolCallsDefaultCollapsed={toolCallsDefaultCollapsed}
             />
-          ) : initialCwdStatus === "validating" ? (
+          )} fallback={initialCwdStatus === "validating" ? (
             <WorkspaceState
               kind="loading"
               title={t("appShell.openingWorkspace")}
@@ -2207,7 +2024,7 @@ export function AppShell() {
                   </div>
                 </div>
               </div>
-          )}
+          )} />
         </div>
           </>
         )}
@@ -2233,7 +2050,6 @@ export function AppShell() {
         revealPath={revealPath}
         onRevealDone={handleRevealDone}
         explorerCwd={explorerCwd}
-        activeCwd={activeCwd}
         explorerRefreshKey={explorerRefreshKey}
         fileSearchOpen={fileSearchOpen}
         onToggleFileSearch={handleToggleFileSearch}
@@ -2286,6 +2102,7 @@ export function AppShell() {
         {rightPanelOpen ? <X size={16} strokeWidth={1.8} aria-hidden="true" /> : <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />}
       </button>
     )}
+    <AppShellOverlays>
     <AppUpdateDialog open={appUpdateDialogOpen} update={appUpdate} phase={appUpdatePhase} visibleStage={appUpdateVisibleStage} error={appUpdateError} onProceed={() => void proceedWithAppUpdate()} onNotNow={dismissAppUpdate} />
     {archiveBrowserOpen && (
       <ArchiveBrowser
@@ -2294,6 +2111,7 @@ export function AppShell() {
         onRestored={handleArchiveRestored}
       />
     )}
+    </AppShellOverlays>
     </ToastProvider>
     </>
   );

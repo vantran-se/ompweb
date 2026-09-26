@@ -1,28 +1,18 @@
 "use client";
 
-import { memo, useEffect, useState, type RefObject } from "react";
-import {
-  AtSign,
-  ChevronsDownUp,
-  Copy,
-  Download,
-  Files,
-  Folder,
-  GitBranch,
-  LocateFixed,
-  RefreshCw,
-  Search,
-  Upload,
-  X,
-} from "lucide-react";
-import { TabBar, type Tab } from "./TabBar";
+import { memo, useEffect, useMemo, useState, type RefObject } from "react";
+import { Files, Folder, GitBranch } from "lucide-react";
+import type { Tab } from "./TabBar";
 import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
 import { GitChangesPanel } from "./GitChangesPanel";
 import { FileViewer } from "./FileViewer";
 import { useI18n } from "@/lib/i18n";
 import { getFileName } from "@/lib/file-paths";
+import { RightPanelProvider, type RightPanelView, type RightPanelViewModel } from "./right-panel/RightPanelContext";
+import { WorkspaceContext } from "./right-panel/PanelHeader";
+import { RightPanelToolbar } from "./right-panel/RightPanelToolbar";
 
-export type RightPanelView = "explorer" | "git" | "file";
+export type { RightPanelView } from "./right-panel/RightPanelContext";
 
 interface Props {
   fileTabs: Tab[];
@@ -37,7 +27,6 @@ interface Props {
   revealPath: string | null;
   onRevealDone: () => void;
   explorerCwd: string | null;
-  activeCwd: string | null;
   explorerRefreshKey: number;
   fileSearchOpen: boolean;
   onToggleFileSearch: () => void;
@@ -49,7 +38,7 @@ interface Props {
   explorerRefreshing: boolean;
   isMobile: boolean;
   isCompactOverlay: boolean;
-  onOpenFile: (filePath: string, fileName: string, sourceSessionId?: string | null) => void;
+  onOpenFile: (filePath: string, fileName: string, sourceSessionId?: string | null, sourceCwd?: string | null) => void;
   onSelectFileTab: (id: string) => void;
   onCloseFileTab: (id: string) => void;
   onCloseOtherFileTabs: () => void;
@@ -87,7 +76,6 @@ export const RightPanel = memo(function RightPanel({
   revealPath,
   onRevealDone,
   explorerCwd,
-  activeCwd,
   explorerRefreshKey,
   fileSearchOpen,
   onToggleFileSearch,
@@ -130,6 +118,49 @@ export const RightPanel = memo(function RightPanel({
       return next;
     });
   }, [rightView]);
+  const panelModel = useMemo<RightPanelViewModel>(() => ({
+    view: rightView,
+    tabs: fileTabs,
+    workspace: {
+      explorerRoot: explorerCwd,
+      activeRoot: activeFileTab?.sourceCwd ?? null,
+      activeFile: activeFileTab,
+    },
+    status: {
+      searchOpen: fileSearchOpen,
+      uploadBusy: explorerUploadBusy,
+      changedFileCount: explorerGitCount,
+      isRepository: explorerIsRepo,
+      refreshing: explorerRefreshing,
+      revealPath,
+    },
+    navigation: {
+      selectView: onSelectView,
+      selectFileTab: onSelectFileTab,
+      closeFileTab: onCloseFileTab,
+      closeOtherFileTabs: onCloseOtherFileTabs,
+      closeAllFileTabs: onCloseAllFileTabs,
+    },
+    discovery: {
+      toggleSearch: onToggleFileSearch,
+      revealActiveFile: onRevealActiveFile,
+      collapseExplorer: () => fileExplorerRef.current?.collapseAll(),
+    },
+    mutation: {
+      openUploadPicker: () => fileExplorerRef.current?.openUploadPicker(),
+      mentionActiveFile: onMentionActiveFile,
+      copyActiveFilePath: onCopyActiveFilePath,
+      downloadActiveFile: onDownloadActiveFile,
+    },
+    refresh: { refreshExplorer: onExplorerRefresh },
+  }), [
+    activeFileTab, explorerCwd, explorerGitCount, explorerIsRepo, explorerRefreshing,
+    explorerUploadBusy, fileExplorerRef, fileSearchOpen,
+    fileTabs, onCloseAllFileTabs, onCloseFileTab, onCloseOtherFileTabs,
+    onCopyActiveFilePath, onDownloadActiveFile, onExplorerRefresh,
+    onMentionActiveFile, onRevealActiveFile, onSelectFileTab, onSelectView,
+    onToggleFileSearch, revealPath, rightView,
+  ]);
 
   return (
     <>
@@ -165,7 +196,7 @@ export const RightPanel = memo(function RightPanel({
       <aside
         id="workspace-file-panel"
         ref={rightPanelRef}
-        className={`right-panel-container${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}${rightPanelResizing ? " right-panel-resizing" : ""}`}
+        className={`right-panel-container right-panel-workspace-shell${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}${rightPanelResizing ? " right-panel-resizing" : ""}`}
         role={isCompactOverlay ? "dialog" : undefined}
         aria-modal={isCompactOverlay ? true : undefined}
         aria-label={t("appShell.filePanel")}
@@ -181,200 +212,25 @@ export const RightPanel = memo(function RightPanel({
           ...(!isMobile && rightPanelWidth !== null ? { "--right-panel-width": `${rightPanelWidth}px` } : {}),
         }}
       >
-        {/* Right panel toolbar: tabs + editor integrations (chat, path, explorer) */}
-        <div className="right-panel-toolbar" style={{ display: "flex", alignItems: "center", flexShrink: 0, background: "var(--bg-panel)", borderBottom: "1px solid var(--border)", minHeight: isMobile ? 44 : 36, paddingRight: isMobile ? 44 : 36, flexWrap: "wrap" }}>
-          <div style={{ flex: isMobile ? "1 0 100%" : "1 1 160px", overflow: "hidden", minWidth: 0 }}>
-            <TabBar
-              tabs={fileTabs}
-              activeTabId={rightView === "file" ? activeFileTabId ?? "" : ""}
-              onSelectTab={onSelectFileTab}
-              onCloseTab={onCloseFileTab}
-              explorerSelected={rightView === "explorer"}
-              onSelectExplorer={() => onSelectView("explorer")}
-              explorerBadge={gitBadge}
-              gitSelected={rightView === "git"}
-              onSelectGit={() => onSelectView("git")}
-              gitBadge={gitBadge}
-            />
-          </div>
-          {rightView === "explorer" ? (
-            explorerCwd && (
-            <div style={{ display: "flex", alignItems: "center", flexShrink: 0, padding: "0 2px" }} role="toolbar" aria-label={t("sessionSidebar.explorer")}>
-              <button
-                onClick={onToggleFileSearch}
-                title={t("fileExplorer.searchFiles")}
-                aria-label={t("fileExplorer.searchFiles")}
-                aria-pressed={fileSearchOpen}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: fileSearchOpen ? "var(--bg-hover)" : "none", border: "none", borderRadius: "var(--radius-control)", color: fileSearchOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { if (fileSearchOpen) return; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { if (fileSearchOpen) return; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <Search size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-              <button
-                onClick={() => fileExplorerRef.current?.openUploadPicker()}
-                disabled={explorerUploadBusy}
-                title={t("sessionSidebar.uploadFilesTitle")}
-                aria-label={t("sessionSidebar.uploadFiles")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-dim)", cursor: explorerUploadBusy ? "default" : "pointer", opacity: explorerUploadBusy ? 0.6 : 1 }}
-                onMouseEnter={(e) => { if (explorerUploadBusy) return; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { if (explorerUploadBusy) return; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <Upload size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-              <button
-                onClick={() => fileExplorerRef.current?.collapseAll()}
-                title={t("sessionSidebar.collapseExplorer")}
-                aria-label={t("sessionSidebar.collapseExplorer")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: isMobile ? "auto" : 26, height: 26, padding: isMobile ? "0 8px" : 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-muted)", cursor: "pointer", fontSize: 11 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "none"; }}
-              >
-                <ChevronsDownUp size={isMobile ? 16 : 13} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0 }} />
-                {isMobile && <span>{t("sessionSidebar.collapseExplorer")}</span>}
-              </button>
-              <button
-                aria-label={t("sessionSidebar.refreshExplorer")}
-                onClick={onExplorerRefresh}
-                title={t("sessionSidebar.refreshExplorer")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: explorerRefreshing ? "var(--accent)" : "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { if (explorerRefreshing) return; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { if (explorerRefreshing) return; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <RefreshCw size={13} strokeWidth={2} aria-hidden="true" className={explorerRefreshing ? "icon-spin" : undefined} />
-              </button>
-            </div>
-            )
-          ) : rightView === "git" ? (
-            explorerCwd && (
-            <div style={{ display: "flex", alignItems: "center", flexShrink: 0, padding: "0 2px" }} role="toolbar" aria-label={t("tabBar.git")}>
-              <button
-                aria-label={t("gitChanges.refreshChanges")}
-                onClick={onExplorerRefresh}
-                title={t("gitChanges.refreshChanges")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: explorerRefreshing ? "var(--accent)" : "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { if (explorerRefreshing) return; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { if (explorerRefreshing) return; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <RefreshCw size={13} strokeWidth={2} aria-hidden="true" className={explorerRefreshing ? "icon-spin" : undefined} />
-              </button>
-            </div>
-            )
-          ) : activeFileTab && (
-            <div style={{ display: "flex", alignItems: "center", flexShrink: 0, padding: "0 2px" }} role="toolbar" aria-label={activeFileTab.filePath}>
-              <button
-                onClick={onMentionActiveFile}
-                title={t("appShell.mentionFileInChat")}
-                aria-label={t("appShell.mentionFileInChat")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--accent)", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-              >
-                <AtSign size={13} strokeWidth={2.2} aria-hidden="true" />
-              </button>
-              <button
-                onClick={onCopyActiveFilePath}
-                title={t("appShell.copyFilePath")}
-                aria-label={t("appShell.copyFilePath")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <Copy size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-              <button
-                onClick={onRevealActiveFile}
-                title={t("appShell.revealInExplorer")}
-                aria-label={t("appShell.revealInExplorer")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: revealPath ? "var(--bg-hover)" : "none", border: "none", borderRadius: "var(--radius-control)", color: revealPath ? "var(--accent)" : "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = revealPath ? "var(--accent)" : "var(--text-dim)"; e.currentTarget.style.background = revealPath ? "var(--bg-hover)" : "none"; }}
-              >
-                <LocateFixed size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-              <button
-                onClick={onDownloadActiveFile}
-                title={t("fileExplorer.downloadFile")}
-                aria-label={t("fileExplorer.downloadFile")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <Download size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-              {fileTabs.length > 1 && (
-                <button
-                  onClick={onCloseOtherFileTabs}
-                  title={t("appShell.closeOtherTabs")}
-                  aria-label={t("appShell.closeOtherTabs")}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 26, padding: "0 7px", background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-dim)", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-                >
-                  {t("appShell.closeOthers")}
-                </button>
-              )}
-              <button
-                onClick={onCloseAllFileTabs}
-                title={t("appShell.closeAllTabs")}
-                aria-label={t("appShell.closeAllTabs")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, padding: 0, background: "none", border: "none", borderRadius: "var(--radius-control)", color: "var(--text-dim)", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "none"; }}
-              >
-                <X size={13} strokeWidth={2} aria-hidden="true" />
-              </button>
-            </div>
-          )}
-        </div>
+        <RightPanelProvider value={panelModel}>
+        <RightPanelToolbar />
 
         {/* Explorer tab view — kept mounted so expansion survives tab switches. */}
-        <div id="workspace-file-panel-explorer" role="tabpanel" aria-label={t("sessionSidebar.explorer")} style={{ display: rightView === "explorer" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <div id="workspace-file-panel-explorer" className="right-panel-view right-panel-explorer-view" role="tabpanel" aria-label={t("sessionSidebar.explorer")} style={{ display: rightView === "explorer" ? "flex" : "none" }}>
           {visitedViews.has("explorer") && (explorerCwd ? (
             <>
-              <div
-                title={explorerCwd}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  margin: "8px 8px 4px",
-                  padding: "5px 8px",
-                  background: "var(--bg-subtle)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-control)",
-                  color: "var(--text-muted)",
-                  minWidth: 0,
-                  flexShrink: 0,
-                }}
-              >
-                <Folder size={13} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, color: "var(--accent)" }} />
-                <span style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {getFileName(explorerCwd)}
-                  </span>
-                  <span style={{ display: "block", fontSize: 10, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>
-                    {explorerCwd}
-                  </span>
-                </span>
-                {explorerIsRepo && (
-                  <span
-                    title={explorerGitCount > 0 ? t("sessionSidebar.explorerChanged", { count: explorerGitCount }) : t("sessionSidebar.explorerClean")}
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      flexShrink: 0,
-                      background: explorerGitCount > 0 ? "var(--status-modified)" : "var(--status-success)",
-                    }}
-                  />
-                )}
-              </div>
-              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <WorkspaceContext
+                root={explorerCwd}
+                changedCount={explorerGitCount}
+                isRepository={explorerIsRepo}
+                changedLabel={t("sessionSidebar.explorerChanged", { count: explorerGitCount })}
+                cleanLabel={t("sessionSidebar.explorerClean")}
+              />
+              <div className="right-panel-view-body">
                 <FileExplorer
                   ref={fileExplorerRef}
                   cwd={explorerCwd}
-                  onOpenFile={onOpenFile}
+                  onOpenFile={(filePath, fileName) => onOpenFile(filePath, fileName, undefined, explorerCwd)}
                   refreshKey={explorerRefreshKey}
                   onAtMention={onAtMention}
                   onAtMentions={onAtMentions}
@@ -398,15 +254,24 @@ export const RightPanel = memo(function RightPanel({
           ))}
         </div>
         {/* Git changes tab view — kept mounted so selection survives tab switches. */}
-        <div id="workspace-file-panel-git" role="tabpanel" aria-label={t("tabBar.git")} style={{ display: rightView === "git" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <div id="workspace-file-panel-git" className="right-panel-view right-panel-git-view" role="tabpanel" aria-label={t("tabBar.git")} style={{ display: rightView === "git" ? "flex" : "none" }}>
           {visitedViews.has("git") && (explorerCwd ? (
-            <GitChangesPanel
-              cwd={explorerCwd}
-              refreshKey={explorerRefreshKey}
-              onOpenFile={onOpenFile}
-              onAtMention={onAtMention}
-              onRefreshDone={onExplorerRefreshDone}
-            />
+            <>
+              <WorkspaceContext
+                root={explorerCwd}
+                changedCount={explorerGitCount}
+                isRepository={explorerIsRepo}
+                changedLabel={t("sessionSidebar.explorerChanged", { count: explorerGitCount })}
+                cleanLabel={t("sessionSidebar.explorerClean")}
+              />
+              <GitChangesPanel
+                cwd={explorerCwd}
+                refreshKey={explorerRefreshKey}
+                onOpenFile={(filePath, fileName) => onOpenFile(filePath, fileName, undefined, explorerCwd)}
+                onAtMention={onAtMention}
+                onRefreshDone={onExplorerRefreshDone}
+              />
+            </>
           ) : (
             <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 24, textAlign: "center" }}>
               <GitBranch size={26} strokeWidth={1.5} aria-hidden="true" style={{ color: "var(--text-dim)" }} />
@@ -416,12 +281,21 @@ export const RightPanel = memo(function RightPanel({
           ))}
         </div>
         {/* Keep open viewers mounted so switching tabs preserves scroll and preview state. */}
-        <div id="workspace-file-panel-file" role="tabpanel" aria-label={activeFileTab?.filePath ?? t("appShell.filePanel")} style={{ display: rightView === "file" ? "block" : "none", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <div id="workspace-file-panel-file" className="right-panel-view right-panel-file-view" role="tabpanel" aria-label={activeFileTab?.filePath ?? t("appShell.filePanel")} style={{ display: rightView === "file" ? "flex" : "none" }}>
+          {activeFileTab?.sourceCwd && (
+            <WorkspaceContext
+              root={activeFileTab.sourceCwd}
+              changedCount={explorerGitCount}
+              isRepository={explorerIsRepo && activeFileTab.sourceCwd === explorerCwd}
+              changedLabel={t("sessionSidebar.explorerChanged", { count: explorerGitCount })}
+              cleanLabel={t("sessionSidebar.explorerClean")}
+            />
+          )}
           {fileTabs.length > 0 ? fileTabs.map((tab) => (
-            <div key={tab.id} style={{ display: tab.id === activeFileTabId ? "block" : "none", height: "100%" }}>
+            <div key={tab.id} className="right-panel-file-slot" style={{ display: tab.id === activeFileTabId ? "block" : "none" }}>
               <FileViewer
                 filePath={tab.filePath}
-                cwd={activeCwd ?? undefined}
+                cwd={tab.sourceCwd ?? undefined}
                 sourceSessionId={tab.sourceSessionId}
                 gitRefreshKey={explorerRefreshKey}
                 active={tab.id === activeFileTabId && rightPanelOpen && rightView === "file"}
@@ -430,6 +304,7 @@ export const RightPanel = memo(function RightPanel({
                   filePath,
                   getFileName(filePath),
                   tab.sourceSessionId,
+                  tab.sourceCwd,
                 )}
               />
             </div>
@@ -441,6 +316,7 @@ export const RightPanel = memo(function RightPanel({
             </div>
           )}
         </div>
+        </RightPanelProvider>
       </aside>
     </>
   );

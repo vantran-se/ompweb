@@ -9,6 +9,7 @@ import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
 import { Collapsible as BaseCollapsible } from "@base-ui/react/collapsible";
 import type React from "react";
+import { OverlaySurface } from "./semantic";
 
 /* ---------------------------------- Dialog --------------------------------- */
 
@@ -42,24 +43,14 @@ export function DialogContent({ children, className, style, ariaLabel }: {
       />
       <BaseDialog.Popup
         aria-label={ariaLabel}
+        render={<OverlaySurface placement="viewport" />}
         className={className}
         style={{
-          position: "fixed", top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
           // Entrance animation must include the centering transform in its
-          // keyframes: an animation overrides the inline transform for its
-          // whole (fill: both) lifetime.
+          // keyframes: an animation overrides the transform for its whole
+          // (fill: both) lifetime.
           animation: "dialog-pop-in var(--dur-med) var(--ease-out-warm) both",
-           zIndex: 1001,
-          background: "var(--bg)",
-          color: "var(--text)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-modal)",
-          boxShadow: "var(--shadow-modal)",
           padding: 20,
-          maxWidth: "min(92vw, 560px)",
-          maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
-          overflow: "auto",
           ...style,
         }}
       >
