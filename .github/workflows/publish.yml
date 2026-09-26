@@ -65,9 +65,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --verify-tag \
-            --title "$RELEASE_TAG" \
-            --generate-notes \
-            dist/ompweb-*.tar.gz dist/SHA256SUMS dist/install.sh dist/install.ps1 dist/install-release.mjs
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; immutable assets are unchanged."
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$RELEASE_TAG" \
+              --generate-notes \
+              dist/ompweb-*.tar.gz dist/SHA256SUMS dist/install.sh dist/install.ps1 dist/install-release.mjs
+          fi
